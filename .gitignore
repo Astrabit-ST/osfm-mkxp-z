@@ -75,3 +75,6 @@ DerivedData/
 
 ## Gcc Patch
 /*.gcno
+
+.cache/
+steamworks/
