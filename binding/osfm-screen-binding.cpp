@@ -53,7 +53,7 @@ struct PingPong {
     }
     
     void clearBuffers() {
-        glState.clearColor.pushSet(Vec4(0, 0, 0, 0));
+        glState.clearColor.pushSet(Vec4(0, 0, 0, 1));
         
         for (int i = 0; i < 2; ++i) {
             FBO::bind(rt[i].fbo);

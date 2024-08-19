@@ -85,7 +85,7 @@ void GLBlendMode::apply(const BlendType &value) {
 
   case BlendAddition:
     gl.BlendEquation(GL_FUNC_ADD);
-    gl.BlendFuncSeparate(GL_ONE, GL_ONE, GL_ZERO, GL_ONE);
+    gl.BlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ONE, GL_ONE);
     break;
 
   case BlendSubstraction:
