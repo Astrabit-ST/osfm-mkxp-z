@@ -530,6 +530,9 @@ struct WindowPrivate
 	{
 		if (size.x <= 0 || size.y <= 0)
 			return;
+		// FIXME: THIS IS A HACK!
+		if (nullOrDisposed(windowskin))
+			return;
 
 		bool updateBaseQuadArray = false;
 
