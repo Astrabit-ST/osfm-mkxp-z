@@ -1018,7 +1018,7 @@ bool SettingsMenu::onEvent(const SDL_Event &event)
 			return false;
 		break;
 
-	case SDL_EVENT_JOYSTICK_BUTTON_DOWN :
+	case SDL_EVENT_GAMEPAD_BUTTON_DOWN :
 	case SDL_EVENT_GAMEPAD_BUTTON_UP :
 	case SDL_EVENT_GAMEPAD_AXIS_MOTION :
 		if (!p->hasFocus)

@@ -116,31 +116,26 @@ void AudioStream::play(const std::string &filename,
 	/* Requested audio file is different from current one */
 	bool diffFile = (filename != current.filename);
 
-	switch (sState)
+	if (diffFile || sState == ALStream::Closed)
 	{
-	case ALStream::Paused :
-	case ALStream::Playing :
-		stream.stop();
-	case ALStream::Stopped :
-		if (diffFile)
-			stream.close();
-	case ALStream::Closed :
-		if (diffFile)
+		try
 		{
-			try
-			{
-				/* This will throw on errors while
-				 * opening the data source */
-				stream.open(filename);
-			}
-			catch (const Exception &e)
-			{
-				unlockStream();
-				throw e;
-			}
+			/* This will throw on errors while
+			 * opening the data source */
+			stream.open(filename);
 		}
-
-		break;
+		catch (const Exception &e)
+		{
+			unlockStream();
+			throw e;
+		}
+	} else {
+		switch (sState)
+		{
+			case ALStream::Paused :
+			case ALStream::Playing :
+				stream.stop();
+		}
 	}
 
 	setVolume(Base, _volume);
@@ -263,7 +258,7 @@ float AudioStream::playingOffset()
 
 void AudioStream::updateVolume()
 {
-	float vol = GLOBAL_VOLUME;
+	float vol = 1.0f;
 
 	for (size_t i = 0; i < VolumeTypeCount; ++i)
 		vol *= volumes[i];
@@ -364,9 +359,7 @@ void AudioStream::fadeInThread()
 			break;
 		}
 
-		/* Quadratic increase (not really the same as
-		 * in RMVXA, but close enough) */
-		setVolume(FadeIn, prog*prog);
+		setVolume(FadeIn, prog);
 
 		unlockStream();
 

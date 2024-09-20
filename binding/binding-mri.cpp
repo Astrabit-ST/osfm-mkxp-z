@@ -362,21 +362,29 @@ static void printP(int argc, VALUE *argv, const char *convMethod,
 }
 
 
-RB_METHOD(mriPrint) {
+RB_METHOD_GUARD(mriPrint) {
     RB_UNUSED_PARAM;
     
     printP(argc, argv, "to_s", "");
     
+    shState->checkShutdown();
+    shState->checkReset();
+    
     return Qnil;
 }
+RB_METHOD_GUARD_END
 
-RB_METHOD(mriP) {
+RB_METHOD_GUARD(mriP) {
     RB_UNUSED_PARAM;
     
     printP(argc, argv, "inspect", "\n");
     
+    shState->checkShutdown();
+    shState->checkReset();
+    
     return Qnil;
 }
+RB_METHOD_GUARD_END
 
 RB_METHOD(mkxpDelta) {
     RB_UNUSED_PARAM;
@@ -575,14 +583,15 @@ RB_METHOD(mkxpSystemMemory) {
     return INT2NUM(SDL_GetSystemRAM());
 }
 
-RB_METHOD(mkxpReloadPathCache) {
+RB_METHOD_GUARD(mkxpReloadPathCache) {
     RB_UNUSED_PARAM;
     
-    GUARD_EXC(shState->fileSystem().reloadPathCache(););
+    shState->fileSystem().reloadPathCache();
     return Qnil;
 }
+RB_METHOD_GUARD_END
 
-RB_METHOD(mkxpAddPath) {
+RB_METHOD_GUARD(mkxpAddPath) {
     RB_UNUSED_PARAM;
     
     VALUE path, mountpoint, reload;
@@ -592,36 +601,32 @@ RB_METHOD(mkxpAddPath) {
     
     const char *mp = (mountpoint == Qnil) ? 0 : RSTRING_PTR(mountpoint);
     
-    try {
-        bool rl = true;
-        if (reload != Qnil)
-            rb_bool_arg(reload, &rl);
-        
-        shState->fileSystem().addPath(RSTRING_PTR(path), mp, rl);
-    } catch (Exception &e) {
-        raiseRbExc(e);
-    }
+    bool rl = true;
+    if (reload != Qnil)
+        rb_bool_arg(reload, &rl);
+    
+    shState->fileSystem().addPath(RSTRING_PTR(path), mp, rl);
+    
     return path;
 }
+RB_METHOD_GUARD_END
 
-RB_METHOD(mkxpRemovePath) {
+RB_METHOD_GUARD(mkxpRemovePath) {
     RB_UNUSED_PARAM;
     
     VALUE path, reload;
     rb_scan_args(argc, argv, "11", &path, &reload);
     SafeStringValue(path);
     
-    try {
-        bool rl = true;
-        if (reload != Qnil)
-            rb_bool_arg(reload, &rl);
-        
-        shState->fileSystem().removePath(RSTRING_PTR(path), rl);
-    } catch (Exception &e) {
-        raiseRbExc(e);
-    }
+    bool rl = true;
+    if (reload != Qnil)
+        rb_bool_arg(reload, &rl);
+    
+    shState->fileSystem().removePath(RSTRING_PTR(path), rl);
+    
     return path;
 }
+RB_METHOD_GUARD_END
 
 RB_METHOD(mkxpFileExists) {
     RB_UNUSED_PARAM;
@@ -648,24 +653,25 @@ RB_METHOD(mkxpSetDefaultFontFamily) {
     return Qnil;
 }
 
-RB_METHOD(mkxpStringToUTF8) {
+RB_METHOD_GUARD(mkxpStringToUTF8) {
     RB_UNUSED_PARAM;
     
     rb_check_argc(argc, 0);
     
     std::string ret(RSTRING_PTR(self), RSTRING_LEN(self));
-    GUARD_EXC(ret = Encoding::convertString(ret); );
+    ret = Encoding::convertString(ret);
     
     return rb_utf8_str_new(ret.c_str(), ret.length());
 }
+RB_METHOD_GUARD_END
 
-RB_METHOD(mkxpStringToUTF8Bang) {
+RB_METHOD_GUARD(mkxpStringToUTF8Bang) {
     RB_UNUSED_PARAM;
     
     rb_check_argc(argc, 0);
     
     std::string ret(RSTRING_PTR(self), RSTRING_LEN(self));
-    GUARD_EXC(ret = Encoding::convertString(ret); );
+    ret = Encoding::convertString(ret);
     
     rb_str_resize(self, ret.length());
     memcpy(RSTRING_PTR(self), ret.c_str(), RSTRING_LEN(self));
@@ -676,6 +682,7 @@ RB_METHOD(mkxpStringToUTF8Bang) {
     
     return self;
 }
+RB_METHOD_GUARD_END
 
 #ifdef __APPLE__
 #define OPENCMD "open "
@@ -688,7 +695,7 @@ RB_METHOD(mkxpStringToUTF8Bang) {
 #define OPENARGS ""
 #endif
 
-RB_METHOD(mkxpLaunch) {
+RB_METHOD_GUARD(mkxpLaunch) {
     RB_UNUSED_PARAM;
     
     VALUE cmdname, args;
@@ -721,11 +728,12 @@ RB_METHOD(mkxpLaunch) {
     }
     
     if (std::system(command.c_str()) != 0) {
-        raiseRbExc(Exception(Exception::MKXPError, "Failed to launch \"%s\"", RSTRING_PTR(cmdname)));
+        throw Exception(Exception::MKXPError, "Failed to launch \"%s\"", RSTRING_PTR(cmdname));
     }
     
     return RUBY_Qnil;
 }
+RB_METHOD_GUARD_END
 
 json5pp::value loadUserSettings() {
     json5pp::value ret;
@@ -769,7 +777,7 @@ RB_METHOD(mkxpGetJSONSetting) {
     
 }
 
-RB_METHOD(mkxpSetJSONSetting) {
+RB_METHOD_GUARD(mkxpSetJSONSetting) {
     RB_UNUSED_PARAM;
     
     VALUE sname, svalue;
@@ -783,6 +791,7 @@ RB_METHOD(mkxpSetJSONSetting) {
     
     return Qnil;
 }
+RB_METHOD_GUARD_END
 
 RB_METHOD(mkxpGetAllJSONSettings) {
     RB_UNUSED_PARAM;
@@ -803,17 +812,26 @@ static VALUE rgssMainRescue(VALUE arg, VALUE exc) {
     return Qnil;
 }
 
-static void processReset() {
-    shState->graphics().reset();
-#ifndef MKXPZ_NO_OPENAL
-    shState->audio().reset();
-#endif
-    
-    shState->rtData().rqReset.clear();
-    shState->graphics().repaintWait(shState->rtData().rqResetFinish, false);
+static bool processReset(bool rubyExc) {
+    #ifndef MKXPZ_NO_OPENAL
+	const char *str =  "Audio.__reset__;Graphics.__reset__;";
+    #endif
+    #ifdef MKXPZ_NO_OPENAL
+	const char *str =  "Graphics.__reset__;";
+    #endif
+	
+	if (rubyExc) {
+		rb_eval_string(str);
+	} else {
+		int state;
+		rb_eval_string_protect(str, &state);
+		return state;
+	}
+	
+	return 0;
 }
 
-RB_METHOD(mriRgssMain) {
+RB_METHOD_GUARD(mriRgssMain) {
     RB_UNUSED_PARAM;
     
     while (true) {
@@ -831,15 +849,16 @@ RB_METHOD(mriRgssMain) {
             break;
         
         if (rb_obj_class(exc) == getRbData()->exc[Reset])
-            processReset();
+            processReset(true);
         else
             rb_exc_raise(exc);
     }
     
     return Qnil;
 }
+RB_METHOD_GUARD_END
 
-RB_METHOD(mriRgssStop) {
+RB_METHOD_GUARD(mriRgssStop) {
     RB_UNUSED_PARAM;
     
     while (true)
@@ -847,6 +866,7 @@ RB_METHOD(mriRgssStop) {
     
     return Qnil;
 }
+RB_METHOD_GUARD_END
 
 RB_METHOD(_kernelCaller) {
     RB_UNUSED_PARAM;
@@ -1086,7 +1106,8 @@ static void runRMXPScripts(BacktraceData &btData) {
         if (rb_obj_class(exc) != getRbData()->exc[Reset])
             break;
         
-        processReset();
+        if (processReset(false))
+            break;
     }
 }
 
@@ -1304,7 +1325,7 @@ static void mriBindingTerminate() {
     #ifdef __linux__
 	    oneshotWallpaperBindingTerminate();
     #endif
-    rb_raise(rb_eSystemExit, " "); 
+    throw Exception(Exception::SystemExit, " "); 
 }
 
-static void mriBindingReset() { rb_raise(getRbData()->exc[Reset], " "); }
+static void mriBindingReset() { throw Exception(Exception::Reset, " "); }
