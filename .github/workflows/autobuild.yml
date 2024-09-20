@@ -34,7 +34,6 @@ jobs:
             mingw-w64-ucrt-x86_64-boost
             mingw-w64-ucrt-x86_64-egl-headers
             mingw-w64-ucrt-x86_64-gles-headers
-            zip
 
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -76,11 +75,6 @@ jobs:
           cp ../journal/_______.exe .
           cp ../../mkxp.json .
           cp ../../assets/LICENSE.mkxp-z-with-https.txt .
-          cd ..
-          # Zipping before uploading decreases the upload time considerably.
-          # Unfortunately this results in double-zipping; tracked at:
-          # https://github.com/actions/upload-artifact/issues/426
-          zip -r artifact.zip artifact
 
       - uses: actions/upload-artifact@v3
         with:
