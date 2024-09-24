@@ -192,7 +192,8 @@ bool SceneElement::operator<(const SceneElement &o) const
 void SceneElement::setSpriteY(int value)
 {
 	spriteY = value;
-	scene->reinsert(*this);
+	if (rgssVer >= 2)
+		scene->reinsert(*this);
 }
 
 void SceneElement::unlink()
