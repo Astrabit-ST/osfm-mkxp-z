@@ -312,6 +312,9 @@ struct Movie
 
             // Periodically check the buffers until one is available
             while(true) {
+                // Quit if audio thread terminate request has been made
+                if (audioThreadTermReq) return;
+
                 alGetSourcei(audioSource, AL_BUFFERS_PROCESSED, &procBufs);
                 if(procBufs > 0) break;
                 SDL_Delay(AUDIO_SLEEP);
@@ -1761,6 +1764,13 @@ void Graphics::reset() {
     
     setFrameRate(DEF_FRAMERATE);
     setBrightness(255);
+    
+    // Always update at least once to clear the screen
+    if (p->threadData->rqResetFinish)
+        update();
+    else
+        repaintWait(p->threadData->rqResetFinish, false);
+    p->threadData->rqReset.clear();
 }
 
 void Graphics::center() {

@@ -67,7 +67,7 @@ AL::Filter::ID constructALFilter(int argc, VALUE *argv) {
 	}
 
 #define DEF_PLAY_STOP_POS(entity) \
-	RB_METHOD(audio_##entity##Play) \
+	RB_METHOD_GUARD(audio_##entity##Play) \
 	{ \
 		RB_UNUSED_PARAM; \
 		const char *filename; \
@@ -75,10 +75,11 @@ AL::Filter::ID constructALFilter(int argc, VALUE *argv) {
 		int pitch = 100; \
 		bool _unused = false; \
 		double pos = 0.0; \
-        rb_get_args(argc, argv, "z|iifb", &filename, &volume, &pitch, &pos, &_unused RB_ARG_END); \
-		GUARD_EXC( shState->audio().entity##Play(filename, volume, pitch, pos); ) \
+    rb_get_args(argc, argv, "z|iifb", &filename, &volume, &pitch, &pos, &_unused RB_ARG_END); \
+		shState->audio().entity##Play(filename, volume, pitch, pos); \
 		return Qnil; \
 	} \
+	RB_METHOD_GUARD_END \
 	RB_METHOD(audio_##entity##Stop) \
 	{ \
 		RB_UNUSED_PARAM; \
@@ -92,16 +93,17 @@ AL::Filter::ID constructALFilter(int argc, VALUE *argv) {
 	}
 
 #define DEF_PLAY_STOP(entity) \
-	RB_METHOD(audio_##entity##Play) \
+	RB_METHOD_GUARD(audio_##entity##Play) \
 	{ \
 		RB_UNUSED_PARAM; \
 		const char *filename; \
 		int volume = 100; \
 		int pitch = 100; \
 		rb_get_args(argc, argv, "z|ii", &filename, &volume, &pitch RB_ARG_END); \
-		GUARD_EXC( shState->audio().entity##Play(filename, volume, pitch); ) \
+		shState->audio().entity##Play(filename, volume, pitch); \
 		return Qnil; \
 	} \
+	RB_METHOD_GUARD_END \
 	RB_METHOD(audio_##entity##Stop) \
 	{ \
 		RB_UNUSED_PARAM; \
@@ -158,7 +160,7 @@ RB_METHOD(audio_##entity##Fade) \
 	}
 
 #define DEF_ALL_AUDIO_CH_FUNC(entity) \
-	RB_METHOD(audio_##entity##Play) \
+	RB_METHOD_GUARD(audio_##entity##Play) \
 	{ \
 		unsigned int id; \
 		const char *filename; \
@@ -166,9 +168,10 @@ RB_METHOD(audio_##entity##Fade) \
 		int pitch = 100; \
 		double pos = -1.0; \
 		rb_get_args(argc, argv, "iz|iif", &id, &filename, &volume, &pitch, &pos RB_ARG_END); \
-		GUARD_EXC( shState->audio().entity##Play(id, filename, volume, pitch, pos); ) \
+		shState->audio().entity##Play(id, filename, volume, pitch, pos); \
 		return Qnil; \
 	} \
+	RB_METHOD_GUARD_END \
 	RB_METHOD(audio_##entity##Stop) \
 	{ \
 		unsigned int id; \
@@ -289,7 +292,7 @@ RB_METHOD(audio_##entity##Fade) \
 
 // does nothing
 #define DEF_CROSSFADE(entity) \
-RB_METHOD(audio_##entity##Crossfade) \
+RB_METHOD_GUARD(audio_##entity##Crossfade) \
 { \
 	RB_UNUSED_PARAM; \
 	const char *filename; \
@@ -299,7 +302,8 @@ RB_METHOD(audio_##entity##Crossfade) \
 	double pos = -1.0; \
 	rb_get_args(argc, argv, "z|fiif", &filename, &time, &volume, &pitch, &pos RB_ARG_END); \
 	return Qnil; \
-}
+} \
+RB_METHOD_GUARD_END
 
 #define DEF_AUD_PROP_I(PropName) \
 	RB_METHOD(audio##Get##PropName) \

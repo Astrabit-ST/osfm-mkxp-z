@@ -20,8 +20,13 @@
 # cp "/usr/lib/$ARCH_CONFIGURE/$("$ARCH_CONFIGURE-objdump" -p local/lib64/libruby.so* | grep -i NEEDED | grep -Eo 'libcrypt.so.[0-9\.]+')" local/lib64/
 
 export ARCH=armv6
-export ARCH_OPENSSL=armv4
-export ARCH_CFLAGS="-mcpu=generic-armv6+fp -mtune=generic-armv6+fp"
+export ARCH_OPENSSL=linux-armv4
+# -march flags from:
+# https://raspberrypi.stackexchange.com/questions/2046/which-cpu-flags-are-suitable-for-gcc-on-raspberry-pi
+# https://stackoverflow.com/questions/35132319/build-for-armv6-with-gnueabihf
+# Disable Thumb since Raspbian doesn't use it and it produces a compiler error:
+# https://thinkingeek.com/2014/12/20/arm-assembler-raspberry-pi-chapter-22/
+export ARCH_CFLAGS="-march=armv6zk+vfpv2 -marm"
 export ARCH_CONFIGURE=arm-linux-gnueabihf
 export CC="$ARCH_CONFIGURE-gcc"
 export ARCH_CMAKE_TOOLCHAIN=toolchain-arm32.cmake

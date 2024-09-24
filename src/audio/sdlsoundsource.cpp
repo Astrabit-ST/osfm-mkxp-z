@@ -19,15 +19,22 @@
 ** along with mkxp.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "SDL3/SDL_audio.h"
+#include "SDL3/SDL_iostream.h"
 #include "aldatasource.h"
 #include "exception.h"
 
 #include <SDL3/SDL_sound.h>
 
+static int SDL_RWopsCloseNoop(SDL_IOStream *ops) {
+	return 0;
+}
+
 struct SDLSoundSource : ALDataSource
 {
 	Sound_Sample *sample;
 	SDL_IOStream *srcOps;
+	SDL_IOStream *unclosableOps;
 	uint8_t sampleSize;
 	bool looped;
 
@@ -37,53 +44,72 @@ struct SDLSoundSource : ALDataSource
 	SDLSoundSource(SDL_IOStream *ops,
 	               const char *extension,
 	               uint32_t maxBufSize,
-	               bool looped,
-	               int fallbackMode)
+	               bool looped)
 	    : srcOps(ops),
 	      looped(looped)
 	{
-		if (fallbackMode == 0)
-		{
-			sample = Sound_NewSample(srcOps, extension, 0, maxBufSize);
-		}
-		else
-		{
-			// We're here because a previous attempt resulted in S32 format.
-
-			Sound_AudioInfo desired;
-			SDL_memset(&desired, '\0', sizeof (Sound_AudioInfo));
-			desired.format = SDL_AUDIO_F32;
-
-			sample = Sound_NewSample(srcOps, extension, &desired, maxBufSize);
-		}
-
+		SDL_IOStreamInterface interface;
+		interface.read = [](void *context, void *ptr, size_t size, SDL_IOStatus *status) -> size_t {
+			SDL_IOStream *ops = static_cast<SDL_IOStream *>(context);
+			size_t read = SDL_ReadIO(ops, ptr, size);
+			*status = SDL_GetIOStatus(ops);
+			return read;
+		};
+		interface.write = [](void *context, const void *ptr, size_t size, SDL_IOStatus *status) -> size_t {
+			SDL_IOStream *ops = static_cast<SDL_IOStream *>(context);
+			size_t written = SDL_WriteIO(ops, ptr, size);
+			*status = SDL_GetIOStatus(ops);
+			return written;
+		};
+		interface.seek = [](void *context, int64_t offset, SDL_IOWhence whence) -> int64_t {
+			SDL_IOStream *ops = static_cast<SDL_IOStream *>(context);
+			int64_t pos = SDL_SeekIO(ops, offset, whence);\
+			return pos;
+		};
+		interface.close= [](void *context) -> int {
+			SDL_IOStream *ops = static_cast<SDL_IOStream *>(context);
+			return SDL_RWopsCloseNoop(ops);
+		};
+		unclosableOps = SDL_OpenIO(&interface, srcOps);
+		
+		sample = Sound_NewSample(unclosableOps, extension, 0, maxBufSize);
+		
 		if (!sample)
 		{
-			SDL_CloseIO(ops);
+			SDL_CloseIO(srcOps);
 			throw Exception(Exception::SDLError, "SDL_sound: %s", Sound_GetError());
 		}
 
-		if (fallbackMode == 0)
+		bool validFormat = true;
+		
+		switch (sample->actual.format)
 		{
-			bool validFormat = true;
-
-			switch (sample->actual.format)
-			{
 			// OpenAL Soft doesn't support S32 formats.
 			// https://github.com/kcat/openal-soft/issues/934
 			case SDL_AUDIO_S32LE :
 			case SDL_AUDIO_S32BE :
 				validFormat = false;
-			}
+		}
 
-			if (!validFormat)
+		if (!validFormat)
+		{
+			// Unfortunately there's no way to change the desired format of a sample.
+			// https://github.com/icculus/SDL_sound/issues/91
+			// So we just have to close the sample (which closes the file too),
+			// and retry with a new desired format.
+			Sound_FreeSample(sample);
+			SDL_SeekIO(unclosableOps, 0, SDL_IO_SEEK_SET);
+			
+			Sound_AudioInfo desired;
+			SDL_memset(&desired, '\0', sizeof (Sound_AudioInfo));
+			desired.format = SDL_AUDIO_F32;
+
+			sample = Sound_NewSample(unclosableOps, extension, &desired, maxBufSize);
+
+			if (!sample)
 			{
-				// Unfortunately there's no way to change the desired format of a sample.
-				// https://github.com/icculus/SDL_sound/issues/91
-				// So we just have to close the sample (which closes the file too),
-				// and retry with a new desired format.
-				Sound_FreeSample(sample);
-				throw Exception(Exception::SDLError, "SDL_sound: format not supported by OpenAL: %d", sample->actual.format);
+				SDL_CloseIO(srcOps);
+				throw Exception(Exception::SDLError, "SDL_sound: %s", Sound_GetError());
 			}
 		}
 
@@ -95,8 +121,8 @@ struct SDLSoundSource : ALDataSource
 
 	~SDLSoundSource()
 	{
-		/* This also closes 'srcOps' */
 		Sound_FreeSample(sample);
+		SDL_CloseIO(srcOps);
 	}
 
 	Status fillBuffer(AL::Buffer::ID alBuffer)
@@ -162,8 +188,7 @@ struct SDLSoundSource : ALDataSource
 ALDataSource *createSDLSource(SDL_IOStream *ops,
                               const char *extension,
 			                  uint32_t maxBufSize,
-			                  bool looped,
-			                  int fallbackMode)
+			                  bool looped)
 {
-	return new SDLSoundSource(ops, extension, maxBufSize, looped, fallbackMode);
+	return new SDLSoundSource(ops, extension, maxBufSize, looped);
 }

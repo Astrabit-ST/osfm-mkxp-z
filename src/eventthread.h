@@ -312,7 +312,9 @@ struct RGSSThreadData
           scale(scalingFactor),
 	      config(newconf),
           glContext(ctx)
-	{}
+	{
+		rqResetFinish.set();
+	}
 };
 
 #endif // EVENTTHREAD_H
