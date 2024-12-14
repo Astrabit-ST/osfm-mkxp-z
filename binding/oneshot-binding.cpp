@@ -1,6 +1,3 @@
-#include <boost/crc.hpp>
-
-#include <SDL3/SDL_video.h>
 #include "binding-types.h"
 #include "binding-util.h"
 #include "etc.h"
@@ -8,6 +5,7 @@
 #include "oneshot.h"
 #include "ruby/internal/special_consts.h"
 #include "sharedstate.h"
+#include <SDL3/SDL_video.h>
 
 #include <SDL3/SDL.h>
 
@@ -35,9 +33,10 @@ RB_METHOD(oneshotMsgBox) {
 //   int char_limit = 100;
 //   VALUE font = Qnil;
 //   rb_get_args(argc, argv, "S|iS", &prompt, &char_limit, &font RB_ARG_END);
-//   std::string promptStr = std::string(RSTRING_PTR(prompt), RSTRING_LEN(prompt));
-//   std::string fontStr =
-//       (font == Qnil) ? "" : std::string(RSTRING_PTR(font), RSTRING_LEN(font));
+//   std::string promptStr = std::string(RSTRING_PTR(prompt),
+//   RSTRING_LEN(prompt)); std::string fontStr =
+//       (font == Qnil) ? "" : std::string(RSTRING_PTR(font),
+//       RSTRING_LEN(font));
 //   return rb_str_new2(
 //       shState->oneshot()
 //           .textinput(promptStr.c_str(), char_limit, fontStr.c_str())
@@ -87,14 +86,29 @@ RB_METHOD(oneshotShake) {
   return Qnil;
 }
 
+// https://stackoverflow.com/questions/21001659/crc32-algorithm-implementation-in-c-without-a-look-up-table-and-with-a-public-li
+uint32_t crc32b(char *data, size_t len) {
+  uint32_t byte, crc, mask;
+
+  crc = 0xFFFFFFFF;
+  for (size_t i = 0; i < len; i++) {
+    byte = data[i]; // Get next byte.
+    crc = crc ^ byte;
+    for (int j = 7; j >= 0; j--) { // Do eight times.
+      mask = -(crc & 1);
+      crc = (crc >> 1) ^ (0xEDB88320 & mask);
+    }
+  }
+  return ~crc;
+}
+
 RB_METHOD(oneshotCRC32) {
   RB_UNUSED_PARAM;
   VALUE string;
-  boost::crc_32_type result;
   rb_get_args(argc, argv, "S", &string RB_ARG_END);
-  std::string str = std::string(RSTRING_PTR(string), RSTRING_LEN(string));
-  result.process_bytes(str.data(), str.length());
-  return UINT2NUM(result.checksum());
+
+  uint32_t crc = crc32b(RSTRING_PTR(string), RSTRING_LEN(string));
+  return UINT2NUM(crc);
 }
 
 void oneshotBindingInit() {

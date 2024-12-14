@@ -112,7 +112,7 @@ if host_system == 'windows'
     global_dependencies += compilers['cpp'].find_library('Shlwapi')
     global_dependencies += compilers['cpp'].find_library('gdiplus')
 elif host_system == 'linux'
-    global_dependencies += [dependency('gtk+-3.0'), dependency('libxfconf-0')]
+    global_dependencies += dependency('gtk+-3.0')
 endif
 
 
