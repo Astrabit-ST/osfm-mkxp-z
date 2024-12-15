@@ -1,5 +1,4 @@
 #include <cstdio>
-#include <dlfcn.h>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -30,6 +29,7 @@ static bool isCached = false;
 #include "mac-desktop.h"
 static bool isCached = false;
 #else
+#include <dlfcn.h>
 #include <gio/gio.h>
 #include <glib.h>
 #include <iostream>
