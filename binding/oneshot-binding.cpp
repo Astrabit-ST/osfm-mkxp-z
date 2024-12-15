@@ -119,8 +119,34 @@ void oneshotBindingInit() {
   rb_const_set(module, rb_intern("OS"),
                rb_str_new2(shState->oneshot().os().c_str()));
 #ifdef __linux__
-  rb_const_set(module, rb_intern("DE"),
-               rb_str_new2(shState->oneshot().desktopEnv.c_str()));
+  const char *text;
+  switch (shState->oneshot().desktop) {
+  case Oneshot::DE_GNOME:
+    text = "gnome";
+    break;
+  case Oneshot::DE_CINNAMON:
+    text = "cinnamon";
+    break;
+  case Oneshot::DE_MATE:
+    text = "mate";
+    break;
+  case Oneshot::DE_LXDE:
+    text = "lxde";
+    break;
+  case Oneshot::DE_XFCE:
+    text = "xfce";
+    break;
+  case Oneshot::DE_KDE:
+    text = "kde";
+    break;
+  case Oneshot::DE_DEEPIN:
+    text = "deepin";
+    break;
+  case Oneshot::DE_FALLBACK:
+    text = "fallback";
+    break;
+  }
+  rb_const_set(module, rb_intern("DE"), rb_str_new2(text));
 #endif
   rb_const_set(module, rb_intern("USER_NAME"),
                rb_str_new2(shState->oneshot().userName().c_str()));

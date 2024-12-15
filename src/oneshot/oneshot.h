@@ -11,77 +11,86 @@
 struct OneshotPrivate;
 struct RGSSThreadData;
 
-class Oneshot
-{
+class Oneshot {
 public:
-	Oneshot(RGSSThreadData &threadData);
-	~Oneshot();
+  Oneshot(RGSSThreadData &threadData);
+  ~Oneshot();
 
-	//msgbox type codes
-	enum
-	{
-		MSG_INFO,
-		MSG_YESNO,
-		MSG_WARN,
-		MSG_ERR,
-	};
+  // msgbox type codes
+  enum {
+    MSG_INFO,
+    MSG_YESNO,
+    MSG_WARN,
+    MSG_ERR,
+  };
 
-	//Wallpaper style
-	enum
-	{
-		STYLE_NONE,
-		STYLE_TILE,
-		STYLE_CENTER,
-		STYLE_STRETCH,
-		STYLE_FIT,
-		STYLE_FILL,
-		STYLE_SPAN,
-	};
+  // Wallpaper style
+  enum {
+    STYLE_NONE,
+    STYLE_TILE,
+    STYLE_CENTER,
+    STYLE_STRETCH,
+    STYLE_FIT,
+    STYLE_FILL,
+    STYLE_SPAN,
+  };
 
-	//Wallpaper gradient
-	enum
-	{
-		GRADIENT_NONE,
-		GRADIENT_HORIZONTAL,
-		GRADIENT_VERTICAL,
-	};
+  // Wallpaper gradient
+  enum {
+    GRADIENT_NONE,
+    GRADIENT_HORIZONTAL,
+    GRADIENT_VERTICAL,
+  };
 
-	void update();
+  // this isn't JS, we have enums!!!!!!!
+  enum Desktop {
+    DE_GNOME,
+    DE_CINNAMON,
+    DE_MATE,
+    DE_LXDE,
+    DE_XFCE,
+    DE_KDE,
+    DE_DEEPIN,
+    DE_FALLBACK,
+  };
 
-	//Accessors
-	const std::string &os() const;
-	const std::string &lang() const;
-	const std::string &userName() const;
-	const std::string &savePath() const;
-	const std::string &docsPath() const;
-	const std::string &gamePath() const;
-	const std::string &journal() const;
-	const std::vector<uint8_t> &obscuredMap() const;
-	bool obscuredCleared() const;
-	bool allowExit() const;
-	bool exiting() const;
+  void update();
 
-	//Mutators
-	void setYesNo(const char *yes, const char *no);
-	void setWindowPos(int x, int y);
-	void setExiting(bool exiting);
-	void setAllowExit(bool allowExit);
-	void resetObscured();
+  // Accessors
+  const std::string &os() const;
+  const std::string &lang() const;
+  const std::string &userName() const;
+  const std::string &savePath() const;
+  const std::string &docsPath() const;
+  const std::string &gamePath() const;
+  const std::string &journal() const;
+  const std::vector<uint8_t> &obscuredMap() const;
+  bool obscuredCleared() const;
+  bool allowExit() const;
+  bool exiting() const;
 
-	//Functions
-	bool msgbox(int type, const char *body, const char *title);
-	// std::string textinput(const char* prompt, int char_limit, const char* fontName);
+  // Mutators
+  void setYesNo(const char *yes, const char *no);
+  void setWindowPos(int x, int y);
+  void setExiting(bool exiting);
+  void setAllowExit(bool allowExit);
+  void resetObscured();
 
-	//Dirty flag for obscured texture
-	bool obscuredDirty;
+  // Functions
+  bool msgbox(int type, const char *body, const char *title);
+  // std::string textinput(const char* prompt, int char_limit, const char*
+  // fontName);
+
+  // Dirty flag for obscured texture
+  bool obscuredDirty;
 
 #ifdef __linux__
-	std::string desktopEnv;
+  Desktop desktop;
 #endif
 
 private:
-	OneshotPrivate *p;
-	RGSSThreadData &threadData;
+  OneshotPrivate *p;
+  RGSSThreadData &threadData;
 };
 
 #endif // ONESHOT_H
