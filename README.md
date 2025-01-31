@@ -4,6 +4,25 @@ This is a fork of mkxp-z that contains (most) of the functionality of modshot/mk
 
 Feel free to use this in place of modshot, but do be aware that this is aimed more at fading memory so you might have to do some configuration to get it working right.
 
+## What doesn't work like modshot
+
+**Most* of modshot's functionality is here, but some of it *isn't*. Stuff that isn't ported from modshot have dummy functions so your game won't crash, but they won't do anything.
+
+What's stubbed out:
+- Crossfading (Too complex, feature in modshot was quite broken, decided not to port it)
+
+What's not here:
+- Easy shaders (Planned, but nobody used the feature in modshot because of how experimental it is)
+- FMOD (Various reasons, please use the libfmod gem instead)
+- CRT shader applied to sprites (There are no methods for this because nobody used the feature)
+- Notifications/Tray icons (Not ported because it's specific to Windows, and nobody used it)
+
+What's *kinda* here:
+- Input::KEY_* (Grafted on top of mkxp-z for compatibility and so your game doesn't crash. But you should migrate to mkxp-z's input methods)
+- OpenAL audio filters
+- The weird extra modshot buttons
+- The oneshot-style keybind meny
+
 # mkxp-z
 
 <p align="center"><b>
