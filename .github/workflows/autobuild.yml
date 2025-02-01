@@ -76,7 +76,7 @@ jobs:
           cp ../../mkxp.json .
           cp ../../assets/LICENSE.mkxp-z-with-https.txt .
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: mkxp-z.windows.${{github.event_name == 'pull_request' && format('PR{0}', github.event.number) || github.ref_name}}-${{steps.short-sha.outputs.sha}}
           path: |
@@ -130,7 +130,7 @@ jobs:
           cd ..
           zip -r lib.zip lib
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: mkxp-z.linux.x86_64.${{github.event_name == 'pull_request' && format('PR{0}', github.event.number) || github.ref_name}}-${{steps.short-sha.outputs.sha}}
           path: build/lib.zip
