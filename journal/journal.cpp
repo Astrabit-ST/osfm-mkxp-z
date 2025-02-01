@@ -288,7 +288,6 @@ void journal_handling(const stbi_uc *initial_image_buf,
 
   ctx.mutex = SDL_CreateMutex();
   SDL_CreateThread(server_thread, "server thread", &ctx);
-  SDL_CreateThread(render_thread, "render thread", &ctx);
 
   SDL_Event event;
   while (ctx.running) {

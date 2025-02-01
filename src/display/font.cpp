@@ -21,19 +21,19 @@
 
 #include "font.h"
 
-#include "sharedstate.h"
-#include "filesystem.h"
-#include "exception.h"
 #include "boost-hash.h"
-#include "util.h"
 #include "config.h"
+#include "exception.h"
+#include "filesystem.h"
+#include "sharedstate.h"
+#include "util.h"
 
 #include "debugwriter.h"
 
-#include <string>
-#include <utility>
 #include <algorithm>
 #include <cctype>
+#include <string>
+#include <utility>
 
 #ifdef MKXPZ_BUILD_XCODE
 #include "filesystem/filesystem.h"
@@ -48,21 +48,20 @@
 #include "wqymicrohei.ttf.xxd"
 #endif
 
-
 #ifndef MKXPZ_CJK_FONT
 #define BUNDLED_FONT terminus
 #else
 #define BUNDLED_FONT wqymicrohei
 #endif
 
-#define BUNDLED_FONT_DECL(FONT) \
-	extern unsigned char ___assets_##FONT##_ttf[]; \
-	extern unsigned int ___assets_##FONT##_ttf_len;
+#define BUNDLED_FONT_DECL(FONT)                                                \
+  extern unsigned char ___assets_##FONT##_ttf[];                               \
+  extern unsigned int ___assets_##FONT##_ttf_len;
 
 BUNDLED_FONT_DECL(terminus)
 
-#define BUNDLED_FONT_D(f) ___assets_## f ##_ttf
-#define BUNDLED_FONT_L(f) ___assets_## f ##_ttf_len
+#define BUNDLED_FONT_D(f) ___assets_##f##_ttf
+#define BUNDLED_FONT_L(f) ___assets_##f##_ttf_len
 
 // Go fuck yourself CPP
 #define BNDL_F_D(f) BUNDLED_FONT_D(f)
@@ -70,461 +69,401 @@ BUNDLED_FONT_DECL(terminus)
 
 #endif
 
-static SDL_IOStream *openBundledFont()
-{
+static SDL_IOStream *openBundledFont() {
 #ifndef MKXPZ_BUILD_XCODE
-    return SDL_IOFromConstMem(BNDL_F_D(BUNDLED_FONT), BNDL_F_L(BUNDLED_FONT));
+  return SDL_IOFromConstMem(BNDL_F_D(BUNDLED_FONT), BNDL_F_L(BUNDLED_FONT));
 #else
-    return SDL_IOFromFile(mkxp_fs::getPathForAsset("Fonts/terminus", "ttf").c_str(), "rb");
+  return SDL_IOFromFile(
+      mkxp_fs::getPathForAsset("Fonts/terminus", "ttf").c_str(), "rb");
 #endif
 }
 
 typedef std::pair<std::string, int> FontKey;
 
-struct FontSet
-{
-	/* 'Regular' style */
-	std::string regular;
+struct FontSet {
+  /* 'Regular' style */
+  std::string regular;
 
-	/* Any other styles (used in case no 'Regular' exists) */
-	std::string other;
+  /* Any other styles (used in case no 'Regular' exists) */
+  std::string other;
 };
 
-struct SharedFontStatePrivate
-{
-	/* Maps: font family name, To: substituted family name,
-	 * as specified via configuration file / arguments */
-	BoostHash<std::string, std::string> subs;
+struct SharedFontStatePrivate {
+  /* Maps: font family name, To: substituted family name,
+   * as specified via configuration file / arguments */
+  BoostHash<std::string, std::string> subs;
 
-	/* Maps: font family name, To: set of physical
-	 * font filenames located in "Fonts/" */
-	BoostHash<std::string, FontSet> sets;
+  /* Maps: font family name, To: set of physical
+   * font filenames located in "Fonts/" */
+  BoostHash<std::string, FontSet> sets;
 
-	/* Pool of already opened fonts; once opened, they are reused
-	 * and never closed until the termination of the program */
-	BoostHash<FontKey, TTF_Font*> pool;
-    
-    /* Internal default font family that is used anytime an
-     * empty/invalid family is requested */
-    std::string defaultFamily;
+  /* Pool of already opened fonts; once opened, they are reused
+   * and never closed until the termination of the program */
+  BoostHash<FontKey, TTF_Font *> pool;
+
+  /* Internal default font family that is used anytime an
+   * empty/invalid family is requested */
+  std::string defaultFamily;
 };
 
-SharedFontState::SharedFontState(const Config &conf)
-{
-	p = new SharedFontStatePrivate;
+SharedFontState::SharedFontState(const Config &conf) {
+  p = new SharedFontStatePrivate;
 
-	/* Parse font substitutions */
-	for (size_t i = 0; i < conf.fontSubs.size(); ++i)
-	{
-		const std::string &raw = conf.fontSubs[i];
-		size_t sepPos = raw.find_first_of('>');
+  /* Parse font substitutions */
+  for (size_t i = 0; i < conf.fontSubs.size(); ++i) {
+    const std::string &raw = conf.fontSubs[i];
+    size_t sepPos = raw.find_first_of('>');
 
-		if (sepPos == std::string::npos)
-			continue;
+    if (sepPos == std::string::npos)
+      continue;
 
-		std::string from = raw.substr(0, sepPos);
-		std::string to   = raw.substr(sepPos+1);
+    std::string from = raw.substr(0, sepPos);
+    std::string to = raw.substr(sepPos + 1);
 
-		p->subs.insert(from, to);
-	}
+    p->subs.insert(from, to);
+  }
 }
 
-SharedFontState::~SharedFontState()
-{
-	BoostHash<FontKey, TTF_Font*>::const_iterator iter;
-	for (iter = p->pool.cbegin(); iter != p->pool.cend(); ++iter)
-		TTF_CloseFont(iter->second);
+SharedFontState::~SharedFontState() {
+  BoostHash<FontKey, TTF_Font *>::const_iterator iter;
+  for (iter = p->pool.cbegin(); iter != p->pool.cend(); ++iter)
+    TTF_CloseFont(iter->second);
 
-	delete p;
+  delete p;
 }
 
 void SharedFontState::initFontSetCB(SDL_IOStream *ops,
-                                    const std::string &filename)
-{
-	TTF_Font *font = TTF_OpenFontIO(ops, 0, 0);
+                                    const std::string &filename) {
+  TTF_Font *font = TTF_OpenFontIO(ops, 0, 0);
 
-	if (!font)
-		return;
+  if (!font) {
+    Debug() << "Failed to open font" << filename << ":\n" << SDL_GetError();
+    return;
+  }
 
-	std::string family = TTF_FontFaceFamilyName(font);
-	std::string style = TTF_FontFaceStyleName(font);
+  std::string family = TTF_GetFontStyleName(font);
+  std::string style = TTF_GetFontStyleName(font);
 
-	std::transform(family.begin(), family.end(), family.begin(),
-		[](unsigned char c){ return std::tolower(c); });
+  std::transform(family.begin(), family.end(), family.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
 
-	TTF_CloseFont(font);
+  TTF_CloseFont(font);
 
-	FontSet &set = p->sets[family];
+  FontSet &set = p->sets[family];
 
-	if (style == "Regular")
-		set.regular = filename;
-	else
-		set.other = filename;
+  if (style == "Regular")
+    set.regular = filename;
+  else
+    set.other = filename;
 }
 
-TTF_Font *SharedFontState::getFont(std::string family,
-                                    int size)
-{
-	std::transform(family.begin(), family.end(), family.begin(),
-		[](unsigned char c){ return std::tolower(c); });
+TTF_Font *SharedFontState::getFont(std::string family, int size) {
+  std::transform(family.begin(), family.end(), family.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
 
-	if (family.empty())
-		family = p->defaultFamily;
+  if (family.empty())
+    family = p->defaultFamily;
 
-	/* Check for substitutions */
-	if (p->subs.contains(family))
-		family = p->subs[family];
+  /* Check for substitutions */
+  if (p->subs.contains(family))
+    family = p->subs[family];
 
-	/* Find out if the font asset exists */
-	const FontSet &req = p->sets[family];
+  /* Find out if the font asset exists */
+  const FontSet &req = p->sets[family];
 
-	if (req.regular.empty() && req.other.empty())
-	{
-		/* Doesn't exist; use built-in font */
-		family = "";
-	}
+  if (req.regular.empty() && req.other.empty()) {
+    /* Doesn't exist; use built-in font */
+    family = "";
+  }
 
-	FontKey key(family, size);
+  FontKey key(family, size);
 
-	TTF_Font *font = p->pool.value(key);
+  TTF_Font *font = p->pool.value(key);
 
-	if (font)
-		return font;
+  if (font)
+    return font;
 
-	/* Not in pool; open new handle */
-	SDL_IOStream *ops;
+  /* Not in pool; open new handle */
+  SDL_IOStream *ops;
 
-	if (family.empty())
-	{
-		/* Built-in font */
-		throw Exception(Exception::RGSSError, "font does not exist");
-	}
-	else
-	{
-		/* Use 'other' path as alternative in case
-		 * we have no 'regular' styled font asset */
-		const char *path = !req.regular.empty()
-		                 ? req.regular.c_str() : req.other.c_str();
+  if (family.empty()) {
+    /* Built-in font */
+    throw Exception(Exception::RGSSError, "font does not exist");
+  } else {
+    /* Use 'other' path as alternative in case
+     * we have no 'regular' styled font asset */
+    const char *path =
+        !req.regular.empty() ? req.regular.c_str() : req.other.c_str();
 
-		ops = shState->fileSystem().openReadRaw(path, true);
-	}
+    ops = shState->fileSystem().openReadRaw(path, true);
+  }
 
-	// FIXME 0.9 is guesswork at this point
-//	float gamma = (96.0/45.0)*(5.0/14.0)*(size-5);
-//	font = TTF_OpenFontRW(ops, 1, gamma /** .90*/);
-	font = TTF_OpenFontIO(ops, 1, size);
+  // FIXME 0.9 is guesswork at this point
+  //	float gamma = (96.0/45.0)*(5.0/14.0)*(size-5);
+  //	font = TTF_OpenFontRW(ops, 1, gamma /** .90*/);
+  font = TTF_OpenFontIO(ops, 1, size);
 
-	if (!font)
-		throw Exception(Exception::SDLError, "%s", SDL_GetError());
+  if (!font)
+    throw Exception(Exception::SDLError, "%s", SDL_GetError());
 
-	p->pool.insert(key, font);
+  p->pool.insert(key, font);
 
-	return font;
+  return font;
 }
 
-bool SharedFontState::fontPresent(std::string family) const
-{
-	std::transform(family.begin(), family.end(), family.begin(),
-		[](unsigned char c){ return std::tolower(c); });
+bool SharedFontState::fontPresent(std::string family) const {
+  std::transform(family.begin(), family.end(), family.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
 
-	/* Check for substitutions */
-	if (p->subs.contains(family))
-		family = p->subs[family];
+  /* Check for substitutions */
+  if (p->subs.contains(family))
+    family = p->subs[family];
 
-	const FontSet &set = p->sets[family];
+  const FontSet &set = p->sets[family];
 
-	return !(set.regular.empty() && set.other.empty());
+  return !(set.regular.empty() && set.other.empty());
 }
 
-TTF_Font *SharedFontState::openBundled(int size)
-{
-	SDL_IOStream *ops = openBundledFont();
+TTF_Font *SharedFontState::openBundled(int size) {
+  SDL_IOStream *ops = openBundledFont();
 
-	return TTF_OpenFontIO(ops, 1, size);
+  return TTF_OpenFontIO(ops, 1, size);
 }
 
 void SharedFontState::setDefaultFontFamily(const std::string &family) {
-    p->defaultFamily = family;
+  p->defaultFamily = family;
 }
 
 void pickExistingFontName(const std::vector<std::string> &names,
-                          std::string &out,
-                          const SharedFontState &sfs)
-{
-	/* Note: In RMXP, a names array with no existing entry
-	 * results in no text being drawn at all (same for "" and []);
-	 * we can't replicate this in mkxp due to the default substitute. */
+                          std::string &out, const SharedFontState &sfs) {
+  /* Note: In RMXP, a names array with no existing entry
+   * results in no text being drawn at all (same for "" and []);
+   * we can't replicate this in mkxp due to the default substitute. */
 
-	for (size_t i = 0; i < names.size(); ++i)
-	{
-		if (sfs.fontPresent(names[i]))
-		{
-			out = names[i];
-			return;
-		}
-		else
-		{
-			if (i == 0)
-			{
-				Debug() << "Primary font not found:" << names[i];
-			}
-			else
-			{
-				Debug() << "Fallback font not found:" << names[i];
-			}
-		}
-	}
+  for (size_t i = 0; i < names.size(); ++i) {
+    if (sfs.fontPresent(names[i])) {
+      out = names[i];
+      return;
+    } else {
+      if (i == 0) {
+        Debug() << "Primary font not found:" << names[i];
+      } else {
+        Debug() << "Fallback font not found:" << names[i];
+      }
+    }
+  }
 
-	out = "";
+  out = "";
 }
 
+struct FontPrivate {
+  std::string name;
+  int size;
+  bool bold;
+  bool italic;
+  bool outline;
+  bool shadow;
+  Color *color;
+  Color *outColor;
 
-struct FontPrivate
-{
-	std::string name;
-	int size;
-	bool bold;
-	bool italic;
-	bool outline;
-	bool shadow;
-	Color *color;
-	Color *outColor;
+  Color colorTmp;
+  Color outColorTmp;
 
-	Color colorTmp;
-	Color outColorTmp;
+  static std::string defaultName;
+  static int defaultSize;
+  static bool defaultBold;
+  static bool defaultItalic;
+  static bool defaultOutline;
+  static bool defaultShadow;
+  static Color *defaultColor;
+  static Color *defaultOutColor;
 
-	static std::string defaultName;
-	static int defaultSize;
-	static bool defaultBold;
-	static bool defaultItalic;
-	static bool defaultOutline;
-	static bool defaultShadow;
-	static Color *defaultColor;
-	static Color *defaultOutColor;
+  static Color defaultColorTmp;
+  static Color defaultOutColorTmp;
 
-	static Color defaultColorTmp;
-	static Color defaultOutColorTmp;
+  static std::vector<std::string> initialDefaultNames;
 
-	static std::vector<std::string> initialDefaultNames;
+  /* The actual font is opened as late as possible
+   * (when it is queried by a Bitmap), prior it is
+   * set to null */
+  TTF_Font *sdlFont;
 
-	/* The actual font is opened as late as possible
-	 * (when it is queried by a Bitmap), prior it is
-	 * set to null */
-	TTF_Font *sdlFont;
-    
-    bool isSolid;
+  bool isSolid;
 
-	FontPrivate(int size)
-	    : size(size),
-	      bold(defaultBold),
-	      italic(defaultItalic),
-	      outline(defaultOutline),
-	      shadow(defaultShadow),
-	      color(&colorTmp),
-	      outColor(&outColorTmp),
-	      colorTmp(*defaultColor),
-	      outColorTmp(*defaultOutColor),
-	      sdlFont(0),
-          isSolid(false)
-	{}
+  FontPrivate(int size)
+      : size(size), bold(defaultBold), italic(defaultItalic),
+        outline(defaultOutline), shadow(defaultShadow), color(&colorTmp),
+        outColor(&outColorTmp), colorTmp(*defaultColor),
+        outColorTmp(*defaultOutColor), sdlFont(0), isSolid(false) {}
 
-	FontPrivate(const FontPrivate &other)
-	    : name(other.name),
-	      size(other.size),
-	      bold(other.bold),
-	      italic(other.italic),
-	      outline(other.outline),
-	      shadow(other.shadow),
-	      color(&colorTmp),
-	      outColor(&outColorTmp),
-	      colorTmp(*other.color),
-	      outColorTmp(*other.outColor),
-	      sdlFont(other.sdlFont),
-          isSolid(false)
-	{}
+  FontPrivate(const FontPrivate &other)
+      : name(other.name), size(other.size), bold(other.bold),
+        italic(other.italic), outline(other.outline), shadow(other.shadow),
+        color(&colorTmp), outColor(&outColorTmp), colorTmp(*other.color),
+        outColorTmp(*other.outColor), sdlFont(other.sdlFont), isSolid(false) {}
 
-	void operator=(const FontPrivate &o)
-	{
-		 name     =  o.name;
-		 size     =  o.size;
-		 bold     =  o.bold;
-		 italic   =  o.italic;
-		 outline  =  o.outline;
-		 shadow   =  o.shadow;
-		*color    = *o.color;
-		*outColor = *o.outColor;
+  void operator=(const FontPrivate &o) {
+    name = o.name;
+    size = o.size;
+    bold = o.bold;
+    italic = o.italic;
+    outline = o.outline;
+    shadow = o.shadow;
+    *color = *o.color;
+    *outColor = *o.outColor;
 
-		sdlFont = 0;
-        isSolid = o.isSolid;
-	}
+    sdlFont = 0;
+    isSolid = o.isSolid;
+  }
 };
 
-std::string FontPrivate::defaultName     = "Arial";
-int         FontPrivate::defaultSize     = 22;
-bool        FontPrivate::defaultBold     = false;
-bool        FontPrivate::defaultItalic   = false;
-bool        FontPrivate::defaultOutline  = false; /* Inited at runtime */
-bool        FontPrivate::defaultShadow   = false; /* Inited at runtime */
-Color      *FontPrivate::defaultColor    = &FontPrivate::defaultColorTmp;
-Color      *FontPrivate::defaultOutColor = &FontPrivate::defaultOutColorTmp;
+std::string FontPrivate::defaultName = "Arial";
+int FontPrivate::defaultSize = 22;
+bool FontPrivate::defaultBold = false;
+bool FontPrivate::defaultItalic = false;
+bool FontPrivate::defaultOutline = false; /* Inited at runtime */
+bool FontPrivate::defaultShadow = false;  /* Inited at runtime */
+Color *FontPrivate::defaultColor = &FontPrivate::defaultColorTmp;
+Color *FontPrivate::defaultOutColor = &FontPrivate::defaultOutColorTmp;
 
 Color FontPrivate::defaultColorTmp(255, 255, 255, 255);
 Color FontPrivate::defaultOutColorTmp(0, 0, 0, 128);
 
 std::vector<std::string> FontPrivate::initialDefaultNames;
 
-bool Font::isSolid() const {
-    return p->isSolid;
+bool Font::isSolid() const { return p->isSolid; }
+
+bool Font::doesExist(const char *name) {
+  if (!name)
+    return false;
+
+  return shState->fontState().fontPresent(name);
 }
 
-bool Font::doesExist(const char *name)
-{
-	if (!name)
-		return false;
+Font::Font(const std::vector<std::string> *names, int size) {
+  p = new FontPrivate(size ? size : FontPrivate::defaultSize);
 
-	return shState->fontState().fontPresent(name);
+  if (names)
+    setName(*names);
+  else
+    p->name = FontPrivate::defaultName;
 }
 
-Font::Font(const std::vector<std::string> *names,
-           int size)
-{
-	p = new FontPrivate(size ? size : FontPrivate::defaultSize);
+Font::Font(const Font &other) { p = new FontPrivate(*other.p); }
 
-	if (names)
-		setName(*names);
-	else
-		p->name = FontPrivate::defaultName;
+Font::~Font() { delete p; }
+
+const Font &Font::operator=(const Font &o) {
+  *p = *o.p;
+
+  return o;
 }
 
-Font::Font(const Font &other)
-{
-	p = new FontPrivate(*other.p);
+void Font::setName(const std::vector<std::string> &names) {
+  pickExistingFontName(names, p->name, shState->fontState());
+  p->isSolid = strcmp(p->name.c_str(), "") &&
+               shState->config().fontIsSolid(p->name.c_str());
+  p->sdlFont = 0;
 }
 
-Font::~Font()
-{
-	delete p;
-}
+void Font::setSize(int value, bool checkIllegal) {
+  if (p->size == value)
+    return;
 
-const Font &Font::operator=(const Font &o)
-{
-	*p = *o.p;
+  /* Catch illegal values (according to RMXP) */
+  if (value < 6 || value > 96) {
+    if (checkIllegal) {
+      throw Exception(Exception::ArgumentError, "%s", "bad value for size");
+    }
+  }
 
-	return o;
-}
-
-void Font::setName(const std::vector<std::string> &names)
-{
-	pickExistingFontName(names, p->name, shState->fontState());
-    p->isSolid = strcmp(p->name.c_str(), "") && shState->config().fontIsSolid(p->name.c_str());
-	p->sdlFont = 0;
-}
-
-void Font::setSize(int value, bool checkIllegal)
-{
-	if (p->size == value)
-		return;
-
-	/* Catch illegal values (according to RMXP) */
-	if (value < 6 || value > 96) {
-		if (checkIllegal) {
-			throw Exception(Exception::ArgumentError, "%s", "bad value for size");
-		}
-	}
-
-	p->size = value;
-	p->sdlFont = 0;
+  p->size = value;
+  p->sdlFont = 0;
 }
 
 static void guardDisposed() {}
 
 DEF_ATTR_RD_SIMPLE(Font, Size, int, p->size)
 
-DEF_ATTR_SIMPLE(Font, Bold,     bool,    p->bold)
-DEF_ATTR_SIMPLE(Font, Italic,   bool,    p->italic)
-DEF_ATTR_SIMPLE(Font, Shadow,   bool,    p->shadow)
-DEF_ATTR_SIMPLE(Font, Outline,  bool,    p->outline)
-DEF_ATTR_SIMPLE(Font, Color,    Color&, *p->color)
-DEF_ATTR_SIMPLE(Font, OutColor, Color&, *p->outColor)
+DEF_ATTR_SIMPLE(Font, Bold, bool, p->bold)
+DEF_ATTR_SIMPLE(Font, Italic, bool, p->italic)
+DEF_ATTR_SIMPLE(Font, Shadow, bool, p->shadow)
+DEF_ATTR_SIMPLE(Font, Outline, bool, p->outline)
+DEF_ATTR_SIMPLE(Font, Color, Color &, *p->color)
+DEF_ATTR_SIMPLE(Font, OutColor, Color &, *p->outColor)
 
-DEF_ATTR_SIMPLE_STATIC(Font, DefaultSize,     int,     FontPrivate::defaultSize)
-DEF_ATTR_SIMPLE_STATIC(Font, DefaultBold,     bool,    FontPrivate::defaultBold)
-DEF_ATTR_SIMPLE_STATIC(Font, DefaultItalic,   bool,    FontPrivate::defaultItalic)
-DEF_ATTR_SIMPLE_STATIC(Font, DefaultShadow,   bool,    FontPrivate::defaultShadow)
-DEF_ATTR_SIMPLE_STATIC(Font, DefaultOutline,  bool,    FontPrivate::defaultOutline)
-DEF_ATTR_SIMPLE_STATIC(Font, DefaultColor,    Color&, *FontPrivate::defaultColor)
-DEF_ATTR_SIMPLE_STATIC(Font, DefaultOutColor, Color&, *FontPrivate::defaultOutColor)
+DEF_ATTR_SIMPLE_STATIC(Font, DefaultSize, int, FontPrivate::defaultSize)
+DEF_ATTR_SIMPLE_STATIC(Font, DefaultBold, bool, FontPrivate::defaultBold)
+DEF_ATTR_SIMPLE_STATIC(Font, DefaultItalic, bool, FontPrivate::defaultItalic)
+DEF_ATTR_SIMPLE_STATIC(Font, DefaultShadow, bool, FontPrivate::defaultShadow)
+DEF_ATTR_SIMPLE_STATIC(Font, DefaultOutline, bool, FontPrivate::defaultOutline)
+DEF_ATTR_SIMPLE_STATIC(Font, DefaultColor, Color &, *FontPrivate::defaultColor)
+DEF_ATTR_SIMPLE_STATIC(Font, DefaultOutColor, Color &,
+                       *FontPrivate::defaultOutColor)
 
 void Font::setDefaultName(const std::vector<std::string> &names,
-                          const SharedFontState &sfs)
-{
-	pickExistingFontName(names, FontPrivate::defaultName, sfs);
+                          const SharedFontState &sfs) {
+  pickExistingFontName(names, FontPrivate::defaultName, sfs);
 }
 
-const std::vector<std::string> &Font::getInitialDefaultNames()
-{
-	return FontPrivate::initialDefaultNames;
+const std::vector<std::string> &Font::getInitialDefaultNames() {
+  return FontPrivate::initialDefaultNames;
 }
 
-void Font::initDynAttribs()
-{
-	p->color = new Color(p->colorTmp);
+void Font::initDynAttribs() {
+  p->color = new Color(p->colorTmp);
 
-	// if (rgssVer >= 3)
-		p->outColor = new Color(p->outColorTmp);;
+  // if (rgssVer >= 3)
+  p->outColor = new Color(p->outColorTmp);
+  ;
 }
 
-void Font::initDefaultDynAttribs()
-{
-	FontPrivate::defaultColor = new Color(FontPrivate::defaultColorTmp);
+void Font::initDefaultDynAttribs() {
+  FontPrivate::defaultColor = new Color(FontPrivate::defaultColorTmp);
 
-	// if (rgssVer >= 3)
-		FontPrivate::defaultOutColor = new Color(FontPrivate::defaultOutColorTmp);
+  // if (rgssVer >= 3)
+  FontPrivate::defaultOutColor = new Color(FontPrivate::defaultOutColorTmp);
 }
 
-void Font::initDefaults(const SharedFontState &sfs)
-{
-	std::vector<std::string> &names = FontPrivate::initialDefaultNames;
+void Font::initDefaults(const SharedFontState &sfs) {
+  std::vector<std::string> &names = FontPrivate::initialDefaultNames;
 
-	switch (rgssVer)
-	{
-	case 1 :
-		// FIXME: Japanese version has "MS PGothic" instead
-		names.push_back("Arial");
-		break;
+  switch (rgssVer) {
+  case 1:
+    // FIXME: Japanese version has "MS PGothic" instead
+    names.push_back("Arial");
+    break;
 
-	case 2 :
-		names.push_back("UmePlus Gothic");
-		names.push_back("MS Gothic");
-		names.push_back("Courier New");
-		break;
+  case 2:
+    names.push_back("UmePlus Gothic");
+    names.push_back("MS Gothic");
+    names.push_back("Courier New");
+    break;
 
-	default:
-	case 3 :
-		names.push_back("VL Gothic");
-	}
+  default:
+  case 3:
+    names.push_back("VL Gothic");
+  }
 
-	setDefaultName(names, sfs);
+  setDefaultName(names, sfs);
 
-	FontPrivate::defaultOutline = (rgssVer >= 3 ? true : false);
-	FontPrivate::defaultShadow  = (rgssVer == 2 ? true : false);
+  FontPrivate::defaultOutline = (rgssVer >= 3 ? true : false);
+  FontPrivate::defaultShadow = (rgssVer == 2 ? true : false);
 }
 
-TTF_Font *Font::getSdlFont()
-{
-	if (!p->sdlFont)
-		p->sdlFont = shState->fontState().getFont(p->name.c_str(),
-		                                          p->size);
+TTF_Font *Font::getSdlFont() {
+  if (!p->sdlFont)
+    p->sdlFont = shState->fontState().getFont(p->name.c_str(), p->size);
 
-	int style = TTF_STYLE_NORMAL;
+  int style = TTF_STYLE_NORMAL;
 
-	if (p->bold)
-		style |= TTF_STYLE_BOLD;
+  if (p->bold)
+    style |= TTF_STYLE_BOLD;
 
-	if (p->italic)
-		style |= TTF_STYLE_ITALIC;
+  if (p->italic)
+    style |= TTF_STYLE_ITALIC;
 
-	TTF_SetFontStyle(p->sdlFont, style);
+  TTF_SetFontStyle(p->sdlFont, style);
 
-	return p->sdlFont;
+  return p->sdlFont;
 }

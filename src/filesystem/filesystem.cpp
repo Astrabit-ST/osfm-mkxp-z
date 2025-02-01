@@ -22,12 +22,12 @@
 #include "filesystem.h"
 
 #include "SDL3/SDL_iostream.h"
+#include "crypto/rgssad.h"
+#include "display/font.h"
 #include "util/boost-hash.h"
 #include "util/debugwriter.h"
 #include "util/exception.h"
 #include "util/util.h"
-#include "display/font.h"
-#include "crypto/rgssad.h"
 
 #include "eventthread.h"
 #include "sharedstate.h"
@@ -130,7 +130,6 @@ static PHYSFS_Io *createSDLRWIo(const char *filename) {
   return io;
 }
 
-
 static Sint64 SDL_RWopsSize(void *data) {
   PHYSFS_File *f = static_cast<PHYSFS_File *>(data);
 
@@ -166,7 +165,8 @@ static Sint64 SDL_RWopsSeek(void *data, int64_t offset, SDL_IOWhence whence) {
   return (result != 0) ? PHYSFS_tell(f) : -1;
 }
 
-static size_t SDL_RWopsRead(void *data, void *buffer, size_t size, SDL_IOStatus* status) {
+static size_t SDL_RWopsRead(void *data, void *buffer, size_t size,
+                            SDL_IOStatus *status) {
   PHYSFS_File *f = static_cast<PHYSFS_File *>(data);
 
   if (!f)
@@ -177,7 +177,8 @@ static size_t SDL_RWopsRead(void *data, void *buffer, size_t size, SDL_IOStatus*
   return (result != -1) ? result : 0;
 }
 
-static size_t SDL_RWopsWrite(void *data, const void *buffer, size_t size, SDL_IOStatus *status) {
+static size_t SDL_RWopsWrite(void *data, const void *buffer, size_t size,
+                             SDL_IOStatus *status) {
   PHYSFS_File *f = static_cast<PHYSFS_File *>(data);
 
   if (!f)
@@ -188,7 +189,7 @@ static size_t SDL_RWopsWrite(void *data, const void *buffer, size_t size, SDL_IO
   return (result != -1) ? result : 0;
 }
 
-static int SDL_RWopsClose(void *data) {
+static bool SDL_RWopsClose(void *data) {
   PHYSFS_File *f = static_cast<PHYSFS_File *>(data);
 
   if (!f)
@@ -196,11 +197,11 @@ static int SDL_RWopsClose(void *data) {
 
   int result = PHYSFS_close(f);
 
-  return (result != 0) ? 0 : -1;
+  return result == 0;
 }
 
-static int SDL_RWopsCloseFree(void *data) {
-  int result = SDL_RWopsClose(data);
+static bool SDL_RWopsCloseFree(void *data) {
+  bool result = SDL_RWopsClose(data);
 
   // pretty sure we don't need this anymore...?
 
@@ -253,14 +254,13 @@ static SDL_IOStream *initReadOps(PHYSFS_File *handle, bool freeOnClose) {
   else
     iface.close = SDL_RWopsClose;
 
-  return SDL_OpenIO(&iface, (void*) handle);
+  return SDL_OpenIO(&iface, (void *)handle);
 }
 
 static void strTolower(std::string &str) {
   for (size_t i = 0; i < str.size(); ++i)
     str[i] = tolower(str[i]);
 }
-
 
 struct FileSystemPrivate {
   /* Maps: lower case full filepath,
@@ -278,13 +278,13 @@ struct FileSystemPrivate {
 static void throwPhysfsError(const char *desc) {
   PHYSFS_ErrorCode ec = PHYSFS_getLastErrorCode();
   const char *englishStr;
-    if (ec == 0) {
-        // Sometimes on Windows PHYSFS_init can return null
-        // but the error code never changes
-        englishStr = "unknown error";
-    } else {
-        englishStr = PHYSFS_getErrorByCode(ec);
-    }
+  if (ec == 0) {
+    // Sometimes on Windows PHYSFS_init can return null
+    // but the error code never changes
+    englishStr = "unknown error";
+  } else {
+    englishStr = PHYSFS_getErrorByCode(ec);
+  }
 
   throw Exception(Exception::PHYSFSError, "%s: %s", desc, englishStr);
 }
@@ -318,9 +318,10 @@ FileSystem::~FileSystem() {
     Debug() << "PhyFS failed to deinit.";
 }
 
-void FileSystem::addPath(const char *path, const char *mountpoint, bool reload) {
+void FileSystem::addPath(const char *path, const char *mountpoint,
+                         bool reload) {
   /* Try the normal mount first */
-    int state = PHYSFS_mount(path, mountpoint, 1);
+  int state = PHYSFS_mount(path, mountpoint, 1);
   if (!state) {
     /* If it didn't work, try mounting via a wrapped
      * SDL_IOStream */
@@ -329,22 +330,26 @@ void FileSystem::addPath(const char *path, const char *mountpoint, bool reload) 
     if (io)
       state = PHYSFS_mountIo(io, path, 0, 1);
   }
-    if (!state) {
-        PHYSFS_ErrorCode err = PHYSFS_getLastErrorCode();
-        throw Exception(Exception::PHYSFSError, "Failed to mount %s (%s)", path, PHYSFS_getErrorByCode(err));
-    }
-    
-    if (reload) reloadPathCache();
+  if (!state) {
+    PHYSFS_ErrorCode err = PHYSFS_getLastErrorCode();
+    throw Exception(Exception::PHYSFSError, "Failed to mount %s (%s)", path,
+                    PHYSFS_getErrorByCode(err));
+  }
+
+  if (reload)
+    reloadPathCache();
 }
 
 void FileSystem::removePath(const char *path, bool reload) {
-    
-    if (!PHYSFS_unmount(path)) {
-        PHYSFS_ErrorCode err = PHYSFS_getLastErrorCode();
-        throw Exception(Exception::PHYSFSError, "Failed to unmount %s (%s)", path, PHYSFS_getErrorByCode(err));
-    }
-    
-    if (reload) reloadPathCache();
+
+  if (!PHYSFS_unmount(path)) {
+    PHYSFS_ErrorCode err = PHYSFS_getLastErrorCode();
+    throw Exception(Exception::PHYSFSError, "Failed to unmount %s (%s)", path,
+                    PHYSFS_getErrorByCode(err));
+  }
+
+  if (reload)
+    reloadPathCache();
 }
 
 struct CacheEnumData {
@@ -392,7 +397,8 @@ struct CacheEnumData {
 static PHYSFS_EnumerateCallbackResult cacheEnumCB(void *d, const char *origdir,
                                                   const char *fname) {
   if (shState && shState->rtData().rqTerm)
-    throw Exception(Exception::MKXPError, "Game close requested. Aborting path cache enumeration.");
+    throw Exception(Exception::MKXPError,
+                    "Game close requested. Aborting path cache enumeration.");
 
   CacheEnumData &data = *static_cast<CacheEnumData *>(d);
   char fullPath[512];
@@ -449,11 +455,12 @@ void FileSystem::createPathCache() {
 }
 
 void FileSystem::reloadPathCache() {
-    if (!p->havePathCache) return;
-    
-    p->fileLists.clear();
-    p->pathCache.clear();
-    createPathCache();
+  if (!p->havePathCache)
+    return;
+
+  p->fileLists.clear();
+  p->pathCache.clear();
+  createPathCache();
 }
 
 struct FontSetsCBData {
@@ -653,8 +660,7 @@ void FileSystem::openRead(OpenHandler &handler, const char *filename) {
     throw Exception(Exception::NoFileError, "%s", filename);
 }
 
-SDL_IOStream *FileSystem::openReadRaw(const char *filename,
-                             bool freeOnClose) {
+SDL_IOStream *FileSystem::openReadRaw(const char *filename, bool freeOnClose) {
 
   PHYSFS_File *handle = PHYSFS_openRead(normalize(filename, 0, 0).c_str());
 
@@ -665,8 +671,8 @@ SDL_IOStream *FileSystem::openReadRaw(const char *filename,
 }
 
 std::string FileSystem::normalize(const char *pathname, bool preferred,
-                            bool absolute) {
-    return filesystemImpl::normalizePath(pathname, preferred, absolute);
+                                  bool absolute) {
+  return filesystemImpl::normalizePath(pathname, preferred, absolute);
 }
 
 bool FileSystem::exists(const char *filename) {
@@ -675,10 +681,9 @@ bool FileSystem::exists(const char *filename) {
 
 const char *FileSystem::desensitize(const char *filename) {
   std::string fn_lower(filename);
-    
-  std::transform(fn_lower.begin(), fn_lower.end(), fn_lower.begin(), [](unsigned char c){
-      return std::tolower(c);
-  });
+
+  std::transform(fn_lower.begin(), fn_lower.end(), fn_lower.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
   if (p->havePathCache && p->pathCache.contains(fn_lower))
     return p->pathCache[fn_lower].c_str();
   return filename;

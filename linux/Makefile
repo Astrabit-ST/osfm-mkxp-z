@@ -200,11 +200,9 @@ $(DOWNLOADS)/sdl3/cmakebuild/Makefile: $(DOWNLOADS)/sdl3/CMakeLists.txt
 	cd $(DOWNLOADS)/sdl3; mkdir -p cmakebuild; cd cmakebuild; \
 	$(CMAKE) -DSDL_STATIC=1 -DSDL_SHARED=0
 
-# need to clone at a specific commit (the sdl3 repo keeps removing the sdl3 tags??)
 $(DOWNLOADS)/sdl3/CMakeLists.txt:
 	$(CLONE) --no-checkout $(GITHUB)/libsdl-org/SDL $(DOWNLOADS)/sdl3
-# Commit made Aug 14 2024
-	cd $(DOWNLOADS)/sdl3; git checkout d60e6e25581731f5f0dddd46b45132ba991ff1d6
+	cd $(DOWNLOADS)/sdl3; git checkout release-3.2.0
 
 # SDL_image
 sdl3image: init_dirs sdl3 $(LIBDIR)/libSDL3_image.a
@@ -230,8 +228,7 @@ $(DOWNLOADS)/sdl3_image/cmakebuild/Makefile: $(DOWNLOADS)/sdl3_image/CMakeLists.
 
 $(DOWNLOADS)/sdl3_image/CMakeLists.txt:
 	$(CLONE) --no-checkout $(GITHUB)/libsdl-org/SDL_image $(DOWNLOADS)/sdl3_image
-# Commit made Aug 14 2024
-	cd $(DOWNLOADS)/sdl3_image; git checkout 5c5051cb3e594cf301e76f6e6b55df1c6b54c04b; \
+	cd $(DOWNLOADS)/sdl3_image; git checkout release-3.2.0; \
 	./external/download.sh
 
 # SDL3_sound
@@ -248,7 +245,9 @@ $(DOWNLOADS)/sdl3_sound/cmakebuild/Makefile: $(DOWNLOADS)/sdl3_sound/CMakeLists.
 	-DSDLSOUND_BUILD_TEST=false
 
 $(DOWNLOADS)/sdl3_sound/CMakeLists.txt:
-	$(CLONE) $(GITHUB)/Astrabit-ST/SDL3_sound $(DOWNLOADS)/sdl3_sound
+	$(CLONE) $(GITHUB)/icculus/SDL_sound $(DOWNLOADS)/sdl3_sound;
+# SDL_sound hasn't made an official sdl3 release yet
+	cd $(DOWNLOADS)/sdl3_sound; git checkout 9000c2b27a6aa210c5ceb5821deae396d67aa4cd;
 
 # SDL3 (ttf)
 sdl3ttf: init_dirs sdl3 $(LIBDIR)/libSDL3_ttf.a
@@ -259,11 +258,12 @@ $(LIBDIR)/libSDL3_ttf.a: $(DOWNLOADS)/sdl3_ttf/cmakebuild/Makefile
 
 $(DOWNLOADS)/sdl3_ttf/cmakebuild/Makefile: $(DOWNLOADS)/sdl3_ttf/CMakeLists.txt
 	cd $(DOWNLOADS)/sdl3_ttf; mkdir cmakebuild; cd cmakebuild; \
-	$(CMAKE) -DBUILD_SHARED_LIBS=no -DSDL3TTF_VENDORED=ON
+	$(CMAKE) -DBUILD_SHARED_LIBS=no -DSDLTTF_VENDORED=ON
 
 $(DOWNLOADS)/sdl3_ttf/CMakeLists.txt:
 	$(CLONE) $(GITHUB)/libsdl-org/SDL_ttf $(DOWNLOADS)/sdl3_ttf
-	cd $(DOWNLOADS)/sdl3_ttf; git checkout 22347419ee08e49d77411c680f15e314ef870ab7; \
+# sdl3_ttf hasn't made an official sdl3 release yet
+	cd $(DOWNLOADS)/sdl3_ttf; git checkout 485fd99baa7b954f41866f7afae3c6ef16bf943a; \
 	./external/download.sh
 
 # OpenAL

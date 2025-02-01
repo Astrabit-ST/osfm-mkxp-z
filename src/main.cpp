@@ -30,23 +30,23 @@
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
 #ifndef MKXPZ_NO_OPENAL
-#include <SDL3/SDL_sound.h>
+#include <SDL3_sound/SDL_sound.h>
 #endif
 #include <SDL3_ttf/SDL_ttf.h>
 
 #include <assert.h>
+#include <regex>
 #include <string.h>
 #include <string>
 #include <unistd.h>
-#include <regex>
 
 #include "binding.h"
-#include "sharedstate.h"
-#include "eventthread.h"
-#include "util/debugwriter.h"
-#include "util/exception.h"
 #include "display/gl/gl-debug.h"
 #include "display/gl/gl-fun.h"
+#include "eventthread.h"
+#include "sharedstate.h"
+#include "util/debugwriter.h"
+#include "util/exception.h"
 
 #include "filesystem/filesystem.h"
 
@@ -54,8 +54,8 @@
 
 #if defined(SDL_PLATFORM_WIN32)
 #include "resource.h"
-#include <Winsock2.h>
 #include "util/win-consoleutils.h"
+#include <Winsock2.h>
 
 // Try to work around buggy GL drivers that tend to be in Optimus laptops
 // by forcing MKXP to use the dedicated card instead of the integrated one
@@ -71,8 +71,8 @@ __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 #endif
 
 #ifdef MKXPZ_BUILD_XCODE
-#include <Availability.h>
 #include "TouchBar.h"
+#include <Availability.h>
 #if !defined(__MAC_10_15) || __MAC_OS_X_VERSION_MAX_ALLOWED < __MAC_10_15
 #define MKXPZ_INIT_GL_LATER
 #endif
@@ -92,24 +92,26 @@ static inline const char *glGetStringInt(GLenum name) {
 }
 
 static void printGLInfo() {
-    const std::string renderer(glGetStringInt(GL_RENDERER));
-    const std::string version(glGetStringInt(GL_VERSION));
-    std::regex rgx("ANGLE \\((.+), ANGLE Metal Renderer: (.+), Version (.+)\\)");
-        
-    std::smatch matches;
-    if (std::regex_search(renderer, matches, rgx)) {
-        
-        Debug() << "Backend           :" << "Metal";
-        Debug() << "Metal Device      :" << matches[2] << "(" + matches[1].str() + ")";
-        Debug() << "Renderer Version  :" << matches[3].str();
-        
+  const std::string renderer(glGetStringInt(GL_RENDERER));
+  const std::string version(glGetStringInt(GL_VERSION));
+  std::regex rgx("ANGLE \\((.+), ANGLE Metal Renderer: (.+), Version (.+)\\)");
+
+  std::smatch matches;
+  if (std::regex_search(renderer, matches, rgx)) {
+
+    Debug() << "Backend           :" << "Metal";
+    Debug() << "Metal Device      :" << matches[2]
+            << "(" + matches[1].str() + ")";
+    Debug() << "Renderer Version  :" << matches[3].str();
+
     std::smatch vmatches;
-        if (std::regex_search(version, vmatches, std::regex("\\(ANGLE (.+) git hash: .+\\)"))) {
-            Debug() << "ANGLE Version     :" << vmatches[1].str();
-        }
-        return;
+    if (std::regex_search(version, vmatches,
+                          std::regex("\\(ANGLE (.+) git hash: .+\\)"))) {
+      Debug() << "ANGLE Version     :" << vmatches[1].str();
     }
-    
+    return;
+  }
+
   Debug() << "Backend      :" << "OpenGL";
   Debug() << "GL Vendor    :" << glGetStringInt(GL_VENDOR);
   Debug() << "GL Renderer  :" << renderer;
@@ -132,8 +134,8 @@ int rgssThreadFun(void *userdata) {
   SDL_GL_MakeCurrent(threadData->window, threadData->glContext);
 #endif
 
-  /* Setup AL context */
-  #ifndef MKXPZ_NO_OPENAL
+/* Setup AL context */
+#ifndef MKXPZ_NO_OPENAL
   ALCcontext *alcCtx = alcCreateContext(threadData->alcDev, 0);
 
   if (!alcCtx) {
@@ -142,15 +144,15 @@ int rgssThreadFun(void *userdata) {
   }
 
   alcMakeContextCurrent(alcCtx);
-  #endif
+#endif
 
   try {
     SharedState::initInstance(threadData);
   } catch (const Exception &exc) {
     rgssThreadError(threadData, exc.msg);
-    #ifndef MKXPZ_NO_OPENAL
+#ifndef MKXPZ_NO_OPENAL
     alcDestroyContext(alcCtx);
-    #endif
+#endif
 
     return 0;
   }
@@ -163,9 +165,9 @@ int rgssThreadFun(void *userdata) {
 
   SharedState::finiInstance();
 
-  #ifndef MKXPZ_NO_OPENAL
+#ifndef MKXPZ_NO_OPENAL
   alcDestroyContext(alcCtx);
-  #endif
+#endif
 
   return 0;
 }
@@ -198,12 +200,13 @@ static void setupWindowIcon(const Config &conf, SDL_Window *win) {
 #ifndef MKXPZ_BUILD_XCODE
     iconSrc = SDL_IOFromConstMem(___assets_icon_png, ___assets_icon_png_len);
 #else
-    iconSrc = SDL_IOFromFile(mkxp_fs::getPathForAsset("icon", "png").c_str(), "rb");
+    iconSrc =
+        SDL_IOFromFile(mkxp_fs::getPathForAsset("icon", "png").c_str(), "rb");
 #endif
   else
     iconSrc = SDL_IOFromFile(conf.iconPath.c_str(), "rb");
 
-  SDL_Surface *iconImg = IMG_Load_IO(iconSrc, SDL_TRUE);
+  SDL_Surface *iconImg = IMG_Load_IO(iconSrc, true);
 
   if (iconImg) {
     SDL_SetWindowIcon(win, iconImg);
@@ -212,322 +215,307 @@ static void setupWindowIcon(const Config &conf, SDL_Window *win) {
 }
 
 int main(int argc, char *argv[]) {
-    SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0");
+  SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0");
 
 #ifdef GLES2_HEADER
-    SDL_SetHint(SDL_HINT_OPENGL_ES_DRIVER, "1");
+  SDL_SetHint(SDL_HINT_OPENGL_ES_DRIVER, "1");
 #endif
 
-    /* initialize SDL first */
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | SDL_INIT_TIMER) < 0) {
-      showInitError(std::string("Error initializing SDL: ") + SDL_GetError());
-      return 0;
-    }
+  /* initialize SDL first */
+  if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
+    showInitError(std::string("Error initializing SDL: ") + SDL_GetError());
+    return 0;
+  }
 
-    if (!EventThread::allocUserEvents()) {
-      showInitError("Error allocating SDL user events");
-      return 0;
-    }
+  if (!EventThread::allocUserEvents()) {
+    showInitError("Error allocating SDL user events");
+    return 0;
+  }
 
 #ifndef WORKDIR_CURRENT
-    char dataDir[512]{};
+  char dataDir[512]{};
 #if defined(__linux__)
-    char *tmp{};
-    tmp = getenv("SRCDIR");
-    if (tmp) {
-      strncpy(dataDir, tmp, sizeof(dataDir));
-    }
+  char *tmp{};
+  tmp = getenv("SRCDIR");
+  if (tmp) {
+    strncpy(dataDir, tmp, sizeof(dataDir));
+  }
 #endif
-    if (!dataDir[0]) {
-        strncpy(dataDir, mkxp_fs::getDefaultGameRoot().c_str(), sizeof(dataDir));
-    }
-    mkxp_fs::setCurrentDirectory(dataDir);
+  if (!dataDir[0]) {
+    strncpy(dataDir, mkxp_fs::getDefaultGameRoot().c_str(), sizeof(dataDir));
+  }
+  mkxp_fs::setCurrentDirectory(dataDir);
 #endif
-    
-    /* now we load the config */
-    Config conf;
-    conf.read(argc, argv);
+
+  /* now we load the config */
+  Config conf;
+  conf.read(argc, argv);
 
 #if defined(SDL_PLATFORM_WIN32)
-    // Create a debug console in debug mode
-    if (conf.winConsole) {
-      if (setupWindowsConsole()) {
-        reopenWindowsStreams();
-      } else {
-        char buf[200];
-        snprintf(buf, sizeof(buf), "Error allocating console: %lu",
-                GetLastError());
-        showInitError(std::string(buf));
-      }
+  // Create a debug console in debug mode
+  if (conf.winConsole) {
+    if (setupWindowsConsole()) {
+      reopenWindowsStreams();
+    } else {
+      char buf[200];
+      snprintf(buf, sizeof(buf), "Error allocating console: %lu",
+               GetLastError());
+      showInitError(std::string(buf));
     }
+  }
 #endif
 
 #ifdef MKXPZ_STEAM
-    if (!STEAMSHIM_init()) {
-      showInitError("Failed to initialize Steamworks. The application cannot "
-                    "continue launching.");
-      SDL_Quit();
-      return 0;
-    }
+  if (!STEAMSHIM_init()) {
+    showInitError("Failed to initialize Steamworks. The application cannot "
+                  "continue launching.");
+    SDL_Quit();
+    return 0;
+  }
 #endif
 
-    if (conf.windowTitle.empty())
-      conf.windowTitle = conf.game.title;
+  if (conf.windowTitle.empty())
+    conf.windowTitle = conf.game.title;
 
-    assert(conf.rgssVersion >= 1 && conf.rgssVersion <= 3);
-    printRgssVersion(conf.rgssVersion);
+  assert(conf.rgssVersion >= 1 && conf.rgssVersion <= 3);
+  printRgssVersion(conf.rgssVersion);
 
-    int imgFlags = IMG_INIT_PNG | IMG_INIT_JPG;
-    if (IMG_Init(imgFlags) != imgFlags) {
-      showInitError(std::string("Error initializing SDL_image: ") +
-                    SDL_GetError());
-      SDL_Quit();
+  if (!TTF_Init()) {
+    showInitError(std::string("Error initializing SDL_ttf: ") + SDL_GetError());
+    SDL_Quit();
 
 #ifdef MKXPZ_STEAM
-      STEAMSHIM_deinit();
+    STEAMSHIM_deinit();
 #endif
 
-      return 0;
-    }
-
-    if (TTF_Init() < 0) {
-      showInitError(std::string("Error initializing SDL_ttf: ") +
-                    SDL_GetError());
-      IMG_Quit();
-      SDL_Quit();
-
-#ifdef MKXPZ_STEAM
-      STEAMSHIM_deinit();
-#endif
-
-      return 0;
-    }
+    return 0;
+  }
 
 #ifndef MKXPZ_NO_OPENAL
-    if (Sound_Init() == 0) {
-      showInitError(std::string("Error initializing SDL_sound: ") +
-                    Sound_GetError());
-      TTF_Quit();
-      IMG_Quit();
-      SDL_Quit();
+  if (Sound_Init() == 0) {
+    showInitError(std::string("Error initializing SDL_sound: ") +
+                  Sound_GetError());
+    TTF_Quit();
+    SDL_Quit();
 
 #ifdef MKXPZ_STEAM
-      STEAMSHIM_deinit();
+    STEAMSHIM_deinit();
 #endif
 
-      return 0;
-    }
+    return 0;
+  }
 #endif
 #if defined(SDL_PLATFORM_WIN32)
-    WSAData wsadata = {0};
-    if (WSAStartup(0x101, &wsadata) || wsadata.wVersion != 0x101) {
-      char buf[200];
-      snprintf(buf, sizeof(buf), "Error initializing winsock: %08X",
-               WSAGetLastError());
-      showInitError(
-          std::string(buf)); // Not an error worth ending the program over
-    }
+  WSAData wsadata = {0};
+  if (WSAStartup(0x101, &wsadata) || wsadata.wVersion != 0x101) {
+    char buf[200];
+    snprintf(buf, sizeof(buf), "Error initializing winsock: %08X",
+             WSAGetLastError());
+    showInitError(
+        std::string(buf)); // Not an error worth ending the program over
+  }
 #endif
 
-    SDL_Window *win;
-    Uint32 winFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_HIGH_PIXEL_DENSITY;
+  SDL_Window *win;
+  Uint32 winFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_INPUT_FOCUS |
+                    SDL_WINDOW_HIGH_PIXEL_DENSITY;
 
-    if (conf.winResizable)
-      winFlags |= SDL_WINDOW_RESIZABLE;
-    if (conf.fullscreen)
-      winFlags |= SDL_WINDOW_FULLSCREEN;
-    
+  if (conf.winResizable)
+    winFlags |= SDL_WINDOW_RESIZABLE;
+  if (conf.fullscreen)
+    winFlags |= SDL_WINDOW_FULLSCREEN;
+
 #ifdef GLES2_HEADER
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 
-    // LoadLibrary properly initializes EGL, it won't work otherwise.
-    // Doesn't completely do it though, needs a small patch to SDL
+  // LoadLibrary properly initializes EGL, it won't work otherwise.
+  // Doesn't completely do it though, needs a small patch to SDL
 #ifdef MKXPZ_BUILD_XCODE
-    SDL_setenv("ANGLE_DEFAULT_PLATFORM", (conf.preferMetalRenderer) ? "metal" : "opengl", true);
-    SDL_GL_LoadLibrary("@rpath/libEGL.dylib");
+  SDL_setenv("ANGLE_DEFAULT_PLATFORM",
+             (conf.preferMetalRenderer) ? "metal" : "opengl", true);
+  SDL_GL_LoadLibrary("@rpath/libEGL.dylib");
 #endif
 #endif
-    
-    win = SDL_CreateWindow(conf.windowTitle.c_str(), conf.defScreenW,
-                           conf.defScreenH, winFlags);
 
-    if (!win) {
-      showInitError(std::string("Error creating window: ") + SDL_GetError());
+  win = SDL_CreateWindow(conf.windowTitle.c_str(), conf.defScreenW,
+                         conf.defScreenH, winFlags);
 
-#ifdef MKXPZ_STEAM
-      STEAMSHIM_deinit();
-#endif
-      return 0;
-    }
-    
-#ifdef MKXPZ_BUILD_XCODE
-    {
-        std::string downloadsPath = "/Users/" + mkxp_sys::getUserName() + "/Downloads";
-        
-        if (mkxp_fs::getCurrentDirectory().find(downloadsPath) == 0) {
-            showInitError(conf.game.title +
-                          " cannot run from the Downloads directory.\n\n" +
-                          "Please move the application to the Applications folder (or anywhere else) " +
-                          "and try again.");
-#ifdef MKXPZ_STEAM
-            STEAMSHIM_deinit();
-#endif
-            return 0;
-        }
-    }
-#endif
-    
-#if defined(MKXPZ_BUILD_XCODE)
-#define DEBUG_FSELECT_MSG "Select the folder from which to load game files. This is the folder containing the game's INI."
-#define DEBUG_FSELECT_PROMPT "Load Game"
-    if (conf.manualFolderSelect) {
-        std::string dataDirStr = mkxp_fs::selectPath(win, DEBUG_FSELECT_MSG, DEBUG_FSELECT_PROMPT);
-        if (!dataDirStr.empty()) {
-            conf.gameFolder = dataDirStr;
-            mkxp_fs::setCurrentDirectory(dataDirStr.c_str());
-            Debug() << "Current directory set to" << dataDirStr;
-            conf.read(argc, argv);
-            conf.readGameINI();
-        }
-    }
-#endif
-
-    /* OSX and Windows have their own native ways of
-     * dealing with icons; don't interfere with them */
-#ifdef SDL_PLATFORM_LINUX
-    setupWindowIcon(conf, win);
-#else
-    (void)setupWindowIcon;
-#endif
-
-    #ifndef MKXPZ_NO_OPENAL
-    ALCdevice *alcDev = alcOpenDevice(0);
-
-    if (!alcDev) {
-      showInitError("Could not detect an available audio device.");
-      SDL_DestroyWindow(win);
-      TTF_Quit();
-      IMG_Quit();
-      SDL_Quit();
-
-#ifdef MKXPZ_STEAM
-      STEAMSHIM_deinit();
-#endif
-      return 0;
-    }
-    #endif
-
-    SDL_DisplayID display_id = SDL_GetDisplayForWindow(win);
-    SDL_DisplayMode mode = *SDL_GetCurrentDisplayMode(display_id);
-
-    /* Can't sync to display refresh rate if its value is unknown */
-    if (!mode.refresh_rate)
-      conf.syncToRefreshrate = false;
-
-    EventThread eventThread;
-
-#ifndef MKXPZ_INIT_GL_LATER
-    SDL_GLContext glCtx = initGL(win, conf, 0);
-#else
-    SDL_GLContext glCtx = NULL;
-#endif
-
-    RGSSThreadData rtData(
-      &eventThread, 
-      argv[0], 
-      win, 
-    #ifndef MKXPZ_NO_OPENAL
-      alcDev, 
-    #endif
-      mode.refresh_rate,
-      mkxp_sys::getScalingFactor(), 
-      conf, 
-      glCtx
-    );
-
-    int winW, winH, drwW, drwH;
-    SDL_GetWindowSize(win, &winW, &winH);
-    rtData.windowSizeMsg.post(Vec2i(winW, winH));
-    
-    SDL_GetWindowSizeInPixels(win, &drwW, &drwH);
-    rtData.drawableSizeMsg.post(Vec2i(drwW, drwH));
-
-    /* Load and post key bindings */
-    rtData.bindingUpdateMsg.post(loadBindings(conf));
-    
-#ifdef MKXPZ_BUILD_XCODE
-    // Create Touch Bar
-    initTouchBar(win, conf);
-#endif
-
-    /* Start RGSS thread */
-    SDL_Thread *rgssThread = SDL_CreateThread(rgssThreadFun, "rgss", &rtData);
-
-    /* Start event processing */
-    eventThread.process(rtData);
-
-    /* Request RGSS thread to stop */
-    rtData.rqTerm.set();
-
-    /* Wait for RGSS thread response */
-    for (int i = 0; i < 1000; ++i) {
-      /* We can stop waiting when the request was ack'd */
-      if (rtData.rqTermAck) {
-        Debug() << "RGSS thread ack'd request after" << i * 10 << "ms";
-        break;
-      }
-
-      /* Give RGSS thread some time to respond */
-      SDL_Delay(10);
-    }
-
-    /* If RGSS thread ack'd request, wait for it to shutdown,
-     * otherwise abandon hope and just end the process as is. */
-    if (rtData.rqTermAck)
-      SDL_WaitThread(rgssThread, 0);
-    else
-      SDL_ShowSimpleMessageBox(
-          SDL_MESSAGEBOX_ERROR, conf.game.title.c_str(),
-          std::string("The RGSS script seems to be stuck. "+conf.game.title+" will now force quit.").c_str(),
-          win);
-
-    if (!rtData.rgssErrorMsg.empty()) {
-      Debug() << rtData.rgssErrorMsg;
-      SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, conf.game.title.c_str(),
-                               rtData.rgssErrorMsg.c_str(), win);
-    }
-
-    if (rtData.glContext)
-      SDL_GL_DestroyContext(rtData.glContext);
-
-    /* Clean up any remainin events */
-    eventThread.cleanup();
-
-    Debug() << "Shutting down.";
-
-    #ifndef MKXPZ_NO_OPENAL
-    alcCloseDevice(alcDev);
-    #endif
-    SDL_DestroyWindow(win);
-
-#if defined(SDL_PLATFORM_WIN32)
-    if (wsadata.wVersion)
-      WSACleanup();
-#endif
+  if (!win) {
+    showInitError(std::string("Error creating window: ") + SDL_GetError());
 
 #ifdef MKXPZ_STEAM
     STEAMSHIM_deinit();
 #endif
-#ifndef MKXPZ_NO_OPENAL
-    Sound_Quit();
+    return 0;
+  }
+
+#ifdef MKXPZ_BUILD_XCODE
+  {
+    std::string downloadsPath =
+        "/Users/" + mkxp_sys::getUserName() + "/Downloads";
+
+    if (mkxp_fs::getCurrentDirectory().find(downloadsPath) == 0) {
+      showInitError(conf.game.title +
+                    " cannot run from the Downloads directory.\n\n" +
+                    "Please move the application to the Applications folder "
+                    "(or anywhere else) " +
+                    "and try again.");
+#ifdef MKXPZ_STEAM
+      STEAMSHIM_deinit();
 #endif
+      return 0;
+    }
+  }
+#endif
+
+#if defined(MKXPZ_BUILD_XCODE)
+#define DEBUG_FSELECT_MSG                                                      \
+  "Select the folder from which to load game files. This is the folder "       \
+  "containing the game's INI."
+#define DEBUG_FSELECT_PROMPT "Load Game"
+  if (conf.manualFolderSelect) {
+    std::string dataDirStr =
+        mkxp_fs::selectPath(win, DEBUG_FSELECT_MSG, DEBUG_FSELECT_PROMPT);
+    if (!dataDirStr.empty()) {
+      conf.gameFolder = dataDirStr;
+      mkxp_fs::setCurrentDirectory(dataDirStr.c_str());
+      Debug() << "Current directory set to" << dataDirStr;
+      conf.read(argc, argv);
+      conf.readGameINI();
+    }
+  }
+#endif
+
+  /* OSX and Windows have their own native ways of
+   * dealing with icons; don't interfere with them */
+#ifdef SDL_PLATFORM_LINUX
+  setupWindowIcon(conf, win);
+#else
+  (void)setupWindowIcon;
+#endif
+
+#ifndef MKXPZ_NO_OPENAL
+  ALCdevice *alcDev = alcOpenDevice(0);
+
+  if (!alcDev) {
+    showInitError("Could not detect an available audio device.");
+    SDL_DestroyWindow(win);
     TTF_Quit();
-    IMG_Quit();
     SDL_Quit();
 
+#ifdef MKXPZ_STEAM
+    STEAMSHIM_deinit();
+#endif
     return 0;
+  }
+#endif
+
+  SDL_DisplayID display_id = SDL_GetDisplayForWindow(win);
+  SDL_DisplayMode mode = *SDL_GetCurrentDisplayMode(display_id);
+
+  /* Can't sync to display refresh rate if its value is unknown */
+  if (!mode.refresh_rate)
+    conf.syncToRefreshrate = false;
+
+  EventThread eventThread;
+
+#ifndef MKXPZ_INIT_GL_LATER
+  SDL_GLContext glCtx = initGL(win, conf, 0);
+#else
+  SDL_GLContext glCtx = NULL;
+#endif
+
+  RGSSThreadData rtData(&eventThread, argv[0], win,
+#ifndef MKXPZ_NO_OPENAL
+                        alcDev,
+#endif
+                        mode.refresh_rate, mkxp_sys::getScalingFactor(), conf,
+                        glCtx);
+
+  int winW, winH, drwW, drwH;
+  SDL_GetWindowSize(win, &winW, &winH);
+  rtData.windowSizeMsg.post(Vec2i(winW, winH));
+
+  SDL_GetWindowSizeInPixels(win, &drwW, &drwH);
+  rtData.drawableSizeMsg.post(Vec2i(drwW, drwH));
+
+  /* Load and post key bindings */
+  rtData.bindingUpdateMsg.post(loadBindings(conf));
+
+#ifdef MKXPZ_BUILD_XCODE
+  // Create Touch Bar
+  initTouchBar(win, conf);
+#endif
+
+  /* Start RGSS thread */
+  SDL_Thread *rgssThread = SDL_CreateThread(rgssThreadFun, "rgss", &rtData);
+
+  /* Start event processing */
+  eventThread.process(rtData);
+
+  /* Request RGSS thread to stop */
+  rtData.rqTerm.set();
+
+  /* Wait for RGSS thread response */
+  for (int i = 0; i < 1000; ++i) {
+    /* We can stop waiting when the request was ack'd */
+    if (rtData.rqTermAck) {
+      Debug() << "RGSS thread ack'd request after" << i * 10 << "ms";
+      break;
+    }
+
+    /* Give RGSS thread some time to respond */
+    SDL_Delay(10);
+  }
+
+  /* If RGSS thread ack'd request, wait for it to shutdown,
+   * otherwise abandon hope and just end the process as is. */
+  if (rtData.rqTermAck)
+    SDL_WaitThread(rgssThread, 0);
+  else
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, conf.game.title.c_str(),
+                             std::string("The RGSS script seems to be stuck. " +
+                                         conf.game.title +
+                                         " will now force quit.")
+                                 .c_str(),
+                             win);
+
+  if (!rtData.rgssErrorMsg.empty()) {
+    Debug() << rtData.rgssErrorMsg;
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, conf.game.title.c_str(),
+                             rtData.rgssErrorMsg.c_str(), win);
+  }
+
+  if (rtData.glContext)
+    SDL_GL_DestroyContext(rtData.glContext);
+
+  /* Clean up any remainin events */
+  eventThread.cleanup();
+
+  Debug() << "Shutting down.";
+
+#ifndef MKXPZ_NO_OPENAL
+  alcCloseDevice(alcDev);
+#endif
+  SDL_DestroyWindow(win);
+
+#if defined(SDL_PLATFORM_WIN32)
+  if (wsadata.wVersion)
+    WSACleanup();
+#endif
+
+#ifdef MKXPZ_STEAM
+  STEAMSHIM_deinit();
+#endif
+#ifndef MKXPZ_NO_OPENAL
+  Sound_Quit();
+#endif
+  TTF_Quit();
+  SDL_Quit();
+
+  return 0;
 }
 
 static SDL_GLContext initGL(SDL_Window *win, Config &conf,
@@ -541,14 +529,15 @@ static SDL_GLContext initGL(SDL_Window *win, Config &conf,
   // SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
   // SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    
+
   if (conf.debugMode)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 
   glCtx = SDL_GL_CreateContext(win);
 
   if (!glCtx) {
-    GLINIT_SHOWERROR(std::string("Could not create OpenGL context: ") + SDL_GetError());
+    GLINIT_SHOWERROR(std::string("Could not create OpenGL context: ") +
+                     SDL_GetError());
     return 0;
   }
 
@@ -570,9 +559,10 @@ static SDL_GLContext initGL(SDL_Window *win, Config &conf,
 
   printGLInfo();
 
-  //bool vsync = conf.vsync || conf.syncToRefreshrate;
-  // SDL_GL_SetSwapInterval(vsync ? 1 : 0);
-  // For various reasons, we don't want vsync. So, we just force it off for now.
+  // bool vsync = conf.vsync || conf.syncToRefreshrate;
+  //  SDL_GL_SetSwapInterval(vsync ? 1 : 0);
+  //  For various reasons, we don't want vsync. So, we just force it off for
+  //  now.
   SDL_GL_SetSwapInterval(0);
 
   // GLDebugLogger dLogger;
