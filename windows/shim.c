@@ -3,7 +3,7 @@
 #include <wchar.h>
 #include <windows.h>
 
-wchar_t *ARGV0 = L"lib\\cloverlink.exe";
+wchar_t *ARGV0 = L"lib\\oneshot.exe";
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                    LPSTR lpCmdLine, int nCmdShow) {
