@@ -134,14 +134,14 @@ SharedFontState::~SharedFontState() {
 
 void SharedFontState::initFontSetCB(SDL_IOStream *ops,
                                     const std::string &filename) {
-  TTF_Font *font = TTF_OpenFontIO(ops, 0, 0);
+  TTF_Font *font = TTF_OpenFontIO(ops, 0, 1.0);
 
   if (!font) {
     Debug() << "Failed to open font" << filename << ":\n" << SDL_GetError();
     return;
   }
 
-  std::string family = TTF_GetFontStyleName(font);
+  std::string family = TTF_GetFontFamilyName(font);
   std::string style = TTF_GetFontStyleName(font);
 
   std::transform(family.begin(), family.end(), family.begin(),
