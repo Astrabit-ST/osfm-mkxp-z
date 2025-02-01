@@ -241,8 +241,9 @@ $(LIBDIR)/libSDL3_ttf.a: $(DOWNLOADS)/sdl3_ttf/cmakebuild/Makefile
 	make -j$(NPROC); make install
 
 $(DOWNLOADS)/sdl3_ttf/cmakebuild/Makefile: $(DOWNLOADS)/sdl3_ttf/CMakeLists.txt
-	cd $(DOWNLOADS)/sdl3_ttf; mkdir cmakebuild; cd cmakebuild; \
-	$(CMAKE) -DBUILD_SHARED_LIBS=no -DSDLTTF_VENDORED=ON
+	cd $(DOWNLOADS)/sdl3_ttf; mkdir cmakebuild; cd cmakebuild;
+# Plutosvg gets some weird errors on windows and I couldn't be bothered to understand why
+	$(CMAKE) -DBUILD_SHARED_LIBS=no -DSDLTTF_VENDORED=ON -DSDLTTF_PLUTOSVG=OFF
 
 $(DOWNLOADS)/sdl3_ttf/CMakeLists.txt:
 	$(CLONE) $(GITHUB)/libsdl-org/SDL_ttf $(DOWNLOADS)/sdl3_ttf
