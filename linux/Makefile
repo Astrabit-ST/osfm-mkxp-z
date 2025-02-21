@@ -263,7 +263,7 @@ $(DOWNLOADS)/sdl3_ttf/cmakebuild/Makefile: $(DOWNLOADS)/sdl3_ttf/CMakeLists.txt
 $(DOWNLOADS)/sdl3_ttf/CMakeLists.txt:
 	$(CLONE) $(GITHUB)/libsdl-org/SDL_ttf $(DOWNLOADS)/sdl3_ttf
 # sdl3_ttf hasn't made an official sdl3 release yet
-	cd $(DOWNLOADS)/sdl3_ttf; git checkout 485fd99baa7b954f41866f7afae3c6ef16bf943a; \
+	cd $(DOWNLOADS)/sdl3_ttf; git checkout 83c00a0d9a9542887295928753897a50ef8541e0; \
 	./external/download.sh
 
 # OpenAL
