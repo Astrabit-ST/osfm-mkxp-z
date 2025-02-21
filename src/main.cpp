@@ -318,7 +318,7 @@ int main(int argc, char *argv[]) {
 
   SDL_Window *win;
   Uint32 winFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_INPUT_FOCUS |
-                    SDL_WINDOW_HIGH_PIXEL_DENSITY;
+                    SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_TRANSPARENT;
 
   if (conf.winResizable)
     winFlags |= SDL_WINDOW_RESIZABLE;
@@ -523,7 +523,7 @@ static SDL_GLContext initGL(SDL_Window *win, Config &conf,
   SDL_GLContext glCtx{};
 
   /* Setup GL context. Must be done in main thread since macOS 10.15 */
-  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 0);
 
   // Hack to enable renderdoc
   // SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);

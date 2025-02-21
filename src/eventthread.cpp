@@ -574,7 +574,35 @@ void EventThread::process(RGSSThreadData &rtData) {
                               args->w);
         SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER,
                               args->h);
-        SDL_SetNumberProperty(props, "flags", args->flags);
+        SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN,
+                               true);
+        for (uint32_t i = 0; i < 32; i++) {
+          uint32_t mask = 1 << i;
+          const char *prop;
+          switch (args->flags & mask) {
+          case SDL_WINDOW_BORDERLESS:
+            prop = SDL_PROP_WINDOW_CREATE_BORDERLESS_BOOLEAN;
+            break;
+          case SDL_WINDOW_HIDDEN:
+            prop = SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN;
+            break;
+          case SDL_WINDOW_ALWAYS_ON_TOP:
+            prop = SDL_PROP_WINDOW_CREATE_ALWAYS_ON_TOP_BOOLEAN;
+            break;
+          case SDL_WINDOW_FULLSCREEN:
+            prop = SDL_PROP_WINDOW_CREATE_FULLSCREEN_BOOLEAN;
+            break;
+          case SDL_WINDOW_UTILITY:
+            prop = SDL_PROP_WINDOW_CREATE_UTILITY_BOOLEAN;
+            break;
+          case SDL_WINDOW_TRANSPARENT:
+            prop = SDL_PROP_WINDOW_CREATE_TRANSPARENT_BOOLEAN;
+            break;
+          default:
+            continue;
+          }
+          SDL_SetBooleanProperty(props, prop, true);
+        }
         new_window = SDL_CreateWindowWithProperties(props);
         SDL_DestroyProperties(props);
         break;
