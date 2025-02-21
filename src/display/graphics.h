@@ -22,10 +22,11 @@
 #ifndef GRAPHICS_H
 #define GRAPHICS_H
 
-#include "util.h"
 #include "gl-util.h"
+#include "quad.h"
+#include "scene.h"
+#include "util.h"
 
-class Scene;
 class Bitmap;
 class Disposable;
 struct RGSSThreadData;
@@ -34,86 +35,132 @@ struct AtomicFlag;
 struct THEORAPLAY_VideoFrame;
 struct Movie;
 
-class Graphics
-{
-public:
-    double getDelta();
-    double lastUpdate();
-    
-	void update(bool checkForShutdown = true);
-	void freeze();
-	void transition(int duration = 8,
-	                const char *filename = "",
-	                int vague = 40);
-	void frameReset();
+struct PingPong {
+  TEXFBO rt[2];
+  uint8_t srcInd, dstInd;
+  int screenW, screenH;
 
-	DECL_ATTR( FrameRate,  int )
-	DECL_ATTR( FrameCount, int )
-	DECL_ATTR( Brightness, int )
+  PingPong(int screenW, int screenH);
 
-	void wait(int duration);
-	void fadeout(int duration);
-	void fadein(int duration);
+  ~PingPong();
+  TEXFBO &backBuffer();
 
-	Bitmap *snapToBitmap();
+  TEXFBO &frontBuffer();
 
-	int width() const;
-	int height() const;
-	int widthHires() const;
-	int heightHires() const;
-	bool isPingPongFramebufferActive() const;
-    int displayContentWidth() const;
-    int displayContentHeight() const;
-    int displayWidth() const;
-    int displayHeight() const;
-	void resizeScreen(int width, int height);
-    void resizeWindow(int width, int height, bool center=false);
-	void drawMovieFrame(const THEORAPLAY_VideoFrame* video, Bitmap *videoBitmap);
-	bool updateMovieInput(Movie *movie);
-	void playMovie(const char *filename, int volume, bool skippable);
-	void screenshot(const char *filename);
+  /* Better not call this during render cycles */
+  void resize(int width, int height);
 
-	void reset();
-    void center();
+  void startRender();
 
-    /* Non-standard extension */
-    DECL_ATTR( Fullscreen, bool )
-    DECL_ATTR( ShowCursor, bool )
-    DECL_ATTR( Scale,    double )
-    DECL_ATTR( Frameskip, bool )
-    DECL_ATTR( FixedAspectRatio, bool )
-    DECL_ATTR( SmoothScaling, int )
-    DECL_ATTR( IntegerScaling, bool )
-    DECL_ATTR( LastMileScaling, bool )
-    DECL_ATTR( Threadsafe, bool )
-    double averageFrameRate();
+  void swapRender();
 
-	/* <internal> */
-	Scene *getScreen() const;
-	/* Repaint screen with static image until exitCond
-	 * is set. Observes reset flag on top of shutdown
-	 * if "checkReset" */
-	void repaintWait(const AtomicFlag &exitCond,
-	                 bool checkReset = true);
-
-		const TEX::ID &obscuredTex() const;
-    
-    void lock(bool force = false);
-    void unlock(bool force = false);
-
-		SDL_GLContext context() const;
+  void clearBuffers();
 
 private:
-	Graphics(RGSSThreadData *data);
-	~Graphics();
+  void bind();
+};
 
-	void addDisposable(Disposable *);
-	void remDisposable(Disposable *);
+class ScreenScene : public Scene {
+public:
+  ScreenScene(int width, int height);
 
-	friend struct SharedStatePrivate;
-	friend class Disposable;
+  void composite();
 
-	GraphicsPrivate *p;
+  void requestViewportRender(const Vec4 &c, const Vec4 &f, const Vec4 &t,
+                             const bool s, const Vec4 rx, const Vec4 ry,
+                             const float cubic);
+
+  void setBrightness(float norm);
+
+  void updateReso(int width, int height);
+
+  void setResolution(int width, int height);
+  PingPong &getPP();
+
+private:
+  PingPong pp;
+  Quad screenQuad;
+
+  Quad brightnessQuad;
+  bool brightEffect;
+};
+
+class Graphics {
+public:
+  double getDelta();
+  double lastUpdate();
+
+  void update(bool checkForShutdown = true);
+  void freeze();
+  void transition(int duration = 8, const char *filename = "", int vague = 40);
+  void frameReset();
+
+  DECL_ATTR(FrameRate, int)
+  DECL_ATTR(FrameCount, int)
+  DECL_ATTR(Brightness, int)
+
+  void wait(int duration);
+  void fadeout(int duration);
+  void fadein(int duration);
+
+  Bitmap *snapToBitmap();
+
+  int width() const;
+  int height() const;
+  int widthHires() const;
+  int heightHires() const;
+  bool isPingPongFramebufferActive() const;
+  int displayContentWidth() const;
+  int displayContentHeight() const;
+  int displayWidth() const;
+  int displayHeight() const;
+  void resizeScreen(int width, int height);
+  void resizeWindow(int width, int height, bool center = false);
+  void drawMovieFrame(const THEORAPLAY_VideoFrame *video, Bitmap *videoBitmap);
+  bool updateMovieInput(Movie *movie);
+  void playMovie(const char *filename, int volume, bool skippable);
+  void screenshot(const char *filename);
+
+  void reset();
+  void center();
+
+  /* Non-standard extension */
+  DECL_ATTR(Fullscreen, bool)
+  DECL_ATTR(ShowCursor, bool)
+  DECL_ATTR(Scale, double)
+  DECL_ATTR(Frameskip, bool)
+  DECL_ATTR(FixedAspectRatio, bool)
+  DECL_ATTR(SmoothScaling, int)
+  DECL_ATTR(IntegerScaling, bool)
+  DECL_ATTR(LastMileScaling, bool)
+  DECL_ATTR(Threadsafe, bool)
+  double averageFrameRate();
+
+  /* <internal> */
+  Scene *getScreen() const;
+  /* Repaint screen with static image until exitCond
+   * is set. Observes reset flag on top of shutdown
+   * if "checkReset" */
+  void repaintWait(const AtomicFlag &exitCond, bool checkReset = true);
+
+  const TEX::ID &obscuredTex() const;
+
+  void lock(bool force = false);
+  void unlock(bool force = false);
+
+  SDL_GLContext context() const;
+
+private:
+  Graphics(RGSSThreadData *data);
+  ~Graphics();
+
+  void addDisposable(Disposable *);
+  void remDisposable(Disposable *);
+
+  friend struct SharedStatePrivate;
+  friend class Disposable;
+
+  GraphicsPrivate *p;
 };
 
 #define GFX_LOCK shState->graphics().lock()
