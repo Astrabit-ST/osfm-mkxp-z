@@ -477,7 +477,7 @@ PingPong::PingPong(int screenW, int screenH)
     TEXFBO::init(rt[i]);
     TEXFBO::allocEmpty(rt[i], screenW, screenH);
     TEXFBO::linkFBO(rt[i]);
-    gl.ClearColor(0, 0, 0, 1);
+    gl.ClearColor(0, 0, 0, 0);
     FBO::clear();
   }
 }
@@ -509,7 +509,7 @@ void PingPong::swapRender() {
 }
 
 void PingPong::clearBuffers() {
-  glState.clearColor.pushSet(Vec4(0, 0, 0, 1));
+  glState.clearColor.pushSet(Vec4(0, 0, 0, 0));
 
   for (int i = 0; i < 2; ++i) {
     FBO::bind(rt[i].fbo);

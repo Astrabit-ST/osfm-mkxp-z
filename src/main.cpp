@@ -523,7 +523,7 @@ static SDL_GLContext initGL(SDL_Window *win, Config &conf,
   SDL_GLContext glCtx{};
 
   /* Setup GL context. Must be done in main thread since macOS 10.15 */
-  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 0);
+  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
   // Hack to enable renderdoc
   // SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);

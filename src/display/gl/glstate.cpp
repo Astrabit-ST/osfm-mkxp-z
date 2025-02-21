@@ -38,17 +38,21 @@ void GLClearColor::apply(const Vec4 &value) {
 }
 
 void GLScissorBox::apply(const IntRect &value) {
-  // High-res: scale the scissorbox if we're rendering to the PingPong framebuffer.
+  // High-res: scale the scissorbox if we're rendering to the PingPong
+  // framebuffer.
   if (shState) {
-    const double framebufferScalingFactor = shState->config().framebufferScalingFactor;
-    if (shState->config().enableHires && shState->graphics().isPingPongFramebufferActive()) {
-      gl.Scissor((int)lround(framebufferScalingFactor * value.x), (int)lround(framebufferScalingFactor * value.y), (int)lround(framebufferScalingFactor * value.w), (int)lround(framebufferScalingFactor * value.h));
-    }
-    else {
+    const double framebufferScalingFactor =
+        shState->config().framebufferScalingFactor;
+    if (shState->config().enableHires &&
+        shState->graphics().isPingPongFramebufferActive()) {
+      gl.Scissor((int)lround(framebufferScalingFactor * value.x),
+                 (int)lround(framebufferScalingFactor * value.y),
+                 (int)lround(framebufferScalingFactor * value.w),
+                 (int)lround(framebufferScalingFactor * value.h));
+    } else {
       gl.Scissor(value.x, value.y, value.w, value.h);
     }
-  }
-  else {
+  } else {
     gl.Scissor(value.x, value.y, value.w, value.h);
   }
 }
@@ -108,7 +112,7 @@ GLState::Caps::Caps() { gl.GetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize); }
 GLState::GLState(const Config &conf) {
   gl.Disable(GL_DEPTH_TEST);
 
-  clearColor.init(Vec4(0, 0, 0, 1));
+  clearColor.init(Vec4(0, 0, 0, 0));
   blendMode.init(BlendNormal);
   blend.init(true);
   scissorTest.init(false);

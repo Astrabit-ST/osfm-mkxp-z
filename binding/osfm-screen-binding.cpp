@@ -45,16 +45,20 @@ void MonitorWindow::render() {
   GLMeta::blitBeginScreen(Vec2i(w, h), false);
   GLMeta::blitSource(scene.getPP().frontBuffer(), 0);
 
-  gl.ClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-  FBO::clear();
-
   GLMeta::blitRectangle(IntRect(0, 0, w, h), IntRect(0, h, w, -h), false);
 
   GLMeta::blitEnd();
   SDL_GL_SwapWindow(window);
 }
 
-DEF_TYPE(MonitorWindow);
+static void free_monitor_window(void *window) {
+  // delete if not null
+  if (window)
+    delete (MonitorWindow *)window;
+}
+
+DEF_TYPE_CUSTOMNAME_AND_FREE(MonitorWindow, "MonitorWindow",
+                             free_monitor_window);
 
 #define GUARD_DISPOSED(w)                                                      \
   if (!w->window)                                                              \
@@ -112,9 +116,9 @@ RB_METHOD(monitorWindowInit) {
 
 RB_METHOD(monitorWindowDispose) {
   MonitorWindow *w = getPrivateData<MonitorWindow>(self);
+  GUARD_DISPOSED(w);
 
-  delete w;
-  setPrivateData(self, nullptr);
+  setPrivateData(self, nullptr); // setPrivateData(nullptr) calls delete for us
 
   return Qnil;
 }
