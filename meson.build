@@ -33,8 +33,6 @@ if disable_openal
     global_args += '-DMKXPZ_NO_OPENAL'
 endif
 
-global_args += '-DZMQ_STATIC'
-
 # ====================
 # Ext libs
 # ====================

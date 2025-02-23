@@ -313,32 +313,6 @@ $(DOWNLOADS)/ruby/configure: $(DOWNLOADS)/ruby/configure.ac
 $(DOWNLOADS)/ruby/configure.ac:
 	$(CLONE) $(GITHUB)/mkxp-z/ruby $(DOWNLOADS)/ruby --single-branch --branch mkxp-z-3.1.3 --depth 1;
 
-libzmq: init_dirs $(LIBDIR)/libzmq.a
-
-$(LIBDIR)/libzmq.a: $(DOWNLOADS)/libzmq/cmakebuild/Makefile
-	cd $(DOWNLOADS)/libzmq/cmakebuild; \
-	make -j$(NPROC); make install
-
-$(DOWNLOADS)/libzmq/cmakebuild/Makefile: $(DOWNLOADS)/libzmq/CMakeLists.txt
-	cd $(DOWNLOADS)/libzmq; mkdir -p cmakebuild; cd cmakebuild; \
-	$(CMAKE) -DWITH_TLS=OFF -DWITH_LIBBSD=OFF -DZMQ_HAVE_IPC=off -DBUILD_SHARED=0
-
-$(DOWNLOADS)/libzmq/CMakeLists.txt:
-	$(CLONE) --branch v4.3.5 $(GITHUB)/zeromq/libzmq $(DOWNLOADS)/libzmq
-
-cppzmq: init_dirs libzmq $(INCLUDEDIR)/zmq.hpp
-
-$(INCLUDEDIR)/zmq.hpp: $(DOWNLOADS)/cppzmq/cmakebuild/Makefile
-	cd $(DOWNLOADS)/cppzmq/cmakebuild; \
-	make -j$(NPROC); make install
-
-$(DOWNLOADS)/cppzmq/cmakebuild/Makefile: $(DOWNLOADS)/cppzmq/CMakeLists.txt
-	cd $(DOWNLOADS)/cppzmq; mkdir -p cmakebuild; cd cmakebuild; \
-	$(CMAKE) -DCPPZMQ_BUILD_TESTS=off
-
-$(DOWNLOADS)/cppzmq/CMakeLists.txt:
-	$(CLONE) --branch v4.10.0 $(GITHUB)/zeromq/cppzmq $(DOWNLOADS)/cppzmq
-
 # ====
 init_dirs:
 	@mkdir -p $(LIBDIR) $(INCLUDEDIR)
@@ -348,5 +322,5 @@ powerwash: clean-downloads
 clean-downloads:
 	-rm -rf downloads
 
-deps-core: libtheora libvorbis pixman libpng physfs sdl3 sdl3image sdl3sound sdl3ttf openal openssl fluidsynth uchardet cppzmq
+deps-core: libtheora libvorbis pixman libpng physfs sdl3 sdl3image sdl3sound sdl3ttf openal openssl fluidsynth uchardet
 everything: deps-core ruby

@@ -1,5 +1,4 @@
 sdl3 = dependency('SDL3', static: true) # compilers['cpp'].find_library('SDL3', static: true)
-cppzmq = dependency('cppzmq', static: false)
 
 embedded_assets = [
     'clover.png',
@@ -48,8 +47,6 @@ link_args = [
     '-static-libgcc', '-static-libstdc++', '-Wl,-Bstatic', '-lgcc', '-lstdc++', '-lpthread', 
 ]
 
-args = ['-DZMQ_STATIC']
-
 if host_system == 'windows'
     link_args += ['-lws2_32', '-liphlpapi']
 endif
@@ -57,7 +54,7 @@ endif
 executable(
     '_______',
     sources: sources,
-    dependencies: [sdl3, cppzmq],
+    dependencies: [sdl3],
     link_args: link_args,
     win_subsystem: 'windows',
     include_directories: includes,
