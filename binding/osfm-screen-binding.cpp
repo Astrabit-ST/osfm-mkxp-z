@@ -14,8 +14,10 @@ struct MonitorWindow {
   ScreenScene scene;
 
   MonitorWindow(int x, int y, int w, int h, unsigned int flags,
-                const char *name)
+                const char *name, bool is_transparent)
       : scene(w, h) {
+    scene.transparent =
+        is_transparent; // this is handled differently, it's weird
     EventThread::CreateWindowArgs args = {x, y, w, h, flags, name};
     window = shState->eThread().requestNewWindow(&args);
     shState->monitorWindows.insert(this);
@@ -78,8 +80,8 @@ RB_METHOD(monitorWindowInit) {
     rb_raise(rb_eArgError, "Invalid window size");
 
   const char *name = " ";
-  unsigned int flags = SDL_WINDOW_OPENGL | SDL_WINDOW_UTILITY |
-                       SDL_WINDOW_BORDERLESS | SDL_WINDOW_TRANSPARENT;
+  unsigned int flags = SDL_WINDOW_UTILITY | SDL_WINDOW_BORDERLESS;
+  bool is_transparent = true;
   if (!NIL_P(kwargs)) {
     ID table[7] = {
         rb_intern("borderless"),    rb_intern("hidden"),
@@ -102,12 +104,14 @@ RB_METHOD(monitorWindowInit) {
     if (!RTEST(values[4]) && values[4] != Qundef)
       flags &= ~SDL_WINDOW_UTILITY; // skipped by default
     if (!RTEST(values[5]) && values[5] != Qundef)
-      flags &= ~SDL_WINDOW_TRANSPARENT; // not transparent by default
+      is_transparent = false; // we handle this seperately because all windows
+                              // need to be transparent for glx reasons
     if (values[6] != Qundef)
       name = StringValueCStr(values[6]);
   }
 
-  MonitorWindow *window = new MonitorWindow(x, y, w, h, flags, name);
+  MonitorWindow *window =
+      new MonitorWindow(x, y, w, h, flags, name, is_transparent);
 
   setPrivateData(self, window);
 

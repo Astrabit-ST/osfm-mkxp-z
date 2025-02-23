@@ -77,6 +77,8 @@ public:
   void setResolution(int width, int height);
   PingPong &getPP();
 
+  bool transparent;
+
 private:
   PingPong pp;
   Quad screenQuad;
@@ -134,6 +136,7 @@ public:
   DECL_ATTR(IntegerScaling, bool)
   DECL_ATTR(LastMileScaling, bool)
   DECL_ATTR(Threadsafe, bool)
+  DECL_ATTR(MainWinTransparent, bool)
   double averageFrameRate();
 
   /* <internal> */

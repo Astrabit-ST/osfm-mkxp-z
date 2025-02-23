@@ -316,6 +316,13 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
+  // why does the main window need to be transparent?
+  // well, because it's what the opengl context is created with, and
+  // if the transparency differs between any two windows, we can't use the gl
+  // context with them. we *need* to use that same gl context for the screen
+  // module, and it's easier to make the main window transparent and draw it
+  // with a black background, so we do that.
+  // this is only an issue with glx, egl doesn't mind
   SDL_Window *win;
   Uint32 winFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_INPUT_FOCUS |
                     SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_TRANSPARENT;

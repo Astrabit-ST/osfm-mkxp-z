@@ -477,7 +477,7 @@ PingPong::PingPong(int screenW, int screenH)
     TEXFBO::init(rt[i]);
     TEXFBO::allocEmpty(rt[i], screenW, screenH);
     TEXFBO::linkFBO(rt[i]);
-    gl.ClearColor(0, 0, 0, 0);
+    gl.ClearColor(0, 0, 0, 1);
     FBO::clear();
   }
 }
@@ -509,7 +509,7 @@ void PingPong::swapRender() {
 }
 
 void PingPong::clearBuffers() {
-  glState.clearColor.pushSet(Vec4(0, 0, 0, 0));
+  glState.clearColor.pushSet(Vec4(0, 0, 0, 1));
 
   for (int i = 0; i < 2; ++i) {
     FBO::bind(rt[i].fbo);
@@ -537,8 +537,11 @@ void ScreenScene::composite() {
   pp.startRender();
 
   glState.viewport.set(IntRect(0, 0, w, h));
-
+  if (!transparent) // clear background to black unless transparent
+    gl.ClearColor(0, 0, 0, 1);
   FBO::clear();
+  if (!transparent) // restore clearcolor
+    gl.ClearColor(0, 0, 0, 0);
 
   Scene::composite();
 
@@ -1910,3 +1913,8 @@ void Graphics::remDisposable(Disposable *d) { p->dispList.remove(d->link); }
 const TEX::ID &Graphics::obscuredTex() const { return p->obscuredTex; }
 
 SDL_GLContext Graphics::context() const { return p->glCtx; }
+
+void Graphics::setMainWinTransparent(bool transparent) {
+  p->screen.transparent = transparent;
+}
+bool Graphics::getMainWinTransparent() const { return p->screen.transparent; }

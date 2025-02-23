@@ -576,6 +576,9 @@ void EventThread::process(RGSSThreadData &rtData) {
                               args->h);
         SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN,
                                true);
+        // always has to be for glx reasons
+        SDL_SetBooleanProperty(
+            props, SDL_PROP_WINDOW_CREATE_TRANSPARENT_BOOLEAN, true);
         for (uint32_t i = 0; i < 32; i++) {
           uint32_t mask = 1 << i;
           const char *prop;
@@ -594,9 +597,6 @@ void EventThread::process(RGSSThreadData &rtData) {
             break;
           case SDL_WINDOW_UTILITY:
             prop = SDL_PROP_WINDOW_CREATE_UTILITY_BOOLEAN;
-            break;
-          case SDL_WINDOW_TRANSPARENT:
-            prop = SDL_PROP_WINDOW_CREATE_TRANSPARENT_BOOLEAN;
             break;
           default:
             continue;
