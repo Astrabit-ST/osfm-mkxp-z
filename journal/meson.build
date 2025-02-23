@@ -1,4 +1,5 @@
 sdl3 = dependency('SDL3', static: true) # compilers['cpp'].find_library('SDL3', static: true)
+boost = dependency('boost', static: true)
 
 embedded_assets = [
     'clover.png',
@@ -54,13 +55,10 @@ endif
 executable(
     '_______',
     sources: sources,
-    dependencies: [sdl3],
+    dependencies: [sdl3, boost],
     link_args: link_args,
     win_subsystem: 'windows',
     include_directories: includes,
-    cpp_args: args,
-    objc_args: args,
-    objcpp_args: args
 )
 
 global_include_dirs += include_directories('common')
