@@ -1,7 +1,7 @@
+// ruby provides its own gettimeofday() in ruby/win32.h, so we have to disable
+// that file somehow. Thanks ruby!
+#define RUBY_WIN32_H 1
 #include "binding-util.h"
-// ruby provides its own gettimeofday() in ruby/win32.h.
-// Thanks ruby!
-#undef gettimeofday
 #include "debugwriter.h"
 #include "i18n.h"
 
