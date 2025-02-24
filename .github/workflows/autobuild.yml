@@ -83,8 +83,8 @@ jobs:
             build/out
 
   build-linux-native:
-    name: Ubuntu 22.04 x86_64
-    runs-on: ubuntu-22.04
+    name: Ubuntu 24.04 x86_64
+    runs-on: ubuntu-24.04
     steps:
       - uses: benjlevesque/short-sha@v2.2
         id: short-sha
