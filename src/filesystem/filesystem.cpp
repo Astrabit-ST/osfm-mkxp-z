@@ -243,6 +243,7 @@ static const char *findExt(const char *filename) {
 
 static SDL_IOStream *initReadOps(PHYSFS_File *handle, bool freeOnClose) {
   SDL_IOStreamInterface iface;
+  SDL_INIT_INTERFACE(&iface);
 
   iface.size = SDL_RWopsSize;
   iface.seek = SDL_RWopsSeek;

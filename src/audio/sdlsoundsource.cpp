@@ -42,6 +42,7 @@ struct SDLSoundSource : ALDataSource {
                  bool looped)
       : srcOps(ops), looped(looped) {
     SDL_IOStreamInterface interface;
+    SDL_INIT_INTERFACE(&interface);
     interface.read = [](void *context, void *ptr, size_t size,
                         SDL_IOStatus *status) -> size_t {
       SDL_IOStream *ops = static_cast<SDL_IOStream *>(context);
