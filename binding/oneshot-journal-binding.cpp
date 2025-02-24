@@ -1,10 +1,8 @@
-#include "binding-types.h"
 #include "binding-util.h"
 #include "debugwriter.h"
 #include "i18n.h"
 
 #include "journal_common.h"
-#include "sharedstate.h"
 
 #include <SDL3/SDL.h>
 #include <cstring>
@@ -12,38 +10,47 @@
 #include <string>
 #include <unistd.h>
 
-#include <zmq.hpp>
+#include <boost/interprocess/ipc/message_queue.hpp>
+
+using namespace boost::interprocess;
 
 static SDL_Thread *thread = NULL;
 static SDL_Mutex *mutex = NULL;
 
-static zmq::context_t *zmq_ctx = NULL;
-static zmq::socket_t *pub_socket = NULL;
-static zmq::socket_t *sub_socket = NULL;
+static message_queue *oneshot_mq; // messages we send to journal
+static message_queue *journal_mq; // messages journal sends to us
 
 static volatile bool active = false;
 static volatile int journal_x = 0;
 static volatile int journal_y = 0;
 
-int server_thread(void *data) {
+int server_thread_fn(void *data) {
 
   // ask any currently open journals to send a hello
   Message message;
-  message.tag = Message::Hello;
-  zmq::message_t zmq_message(sizeof(Message));
+  unsigned int priority;
+  size_t recvd_size;
 
-  pub_socket->send(zmq_message, zmq::send_flags::none);
+  // clear the queue by reading all the messages
+  while (journal_mq->try_receive(&message, sizeof(message), recvd_size,
+                                 priority)) {
+    Debug() << "WARN:" << "Leftover message" << message.tag;
+  }
+
+  message.tag = Message::Hello;
+  oneshot_mq->send(&message, sizeof(message), 255);
 
   // set active if any journals responded with hello
   for (;;) {
-    try {
-      sub_socket->recv(zmq_message, zmq::recv_flags::none);
-    } catch (zmq::error_t &exception) {
-      std::cerr << "zmq socket recv error: " << exception.what() << std::endl;
-      return 1;
+    // for whatever reason a plain recieve() misses some messages. this doesn't
+    // tho
+    bool did_recv = false;
+    while (!did_recv) {
+      auto now = std::chrono::steady_clock::now();
+      auto abs_time = now + std::chrono::milliseconds(8);
+      did_recv = journal_mq->timed_receive(&message, sizeof(message),
+                                           recvd_size, priority, abs_time);
     }
-    message = *zmq_message.data<Message>();
-
     switch (message.tag) {
     case Message::Hello:
       active = true;
@@ -74,14 +81,12 @@ RB_METHOD(journalSet) {
     return Qnil;
 
   Message message;
-  zmq::message_t zmq_message(sizeof(Message));
 
   // replicate old journal behaviour where calling set() with "" closes the
   // journal
   if (strlen(name) == 0) {
     message.tag = Message::Close;
-    zmq_message.rebuild(&message, sizeof(Message));
-    pub_socket->send(zmq_message, zmq::send_flags::none);
+    oneshot_mq->send(&message, sizeof(message), 255);
 
     active = false;
 
@@ -105,15 +110,12 @@ RB_METHOD(journalSet) {
     message.val.text.len = substr.length();
     strncpy(message.val.text.chars, substr.c_str(), substr.length());
 
-    // send message
-    zmq_message.rebuild(&message, sizeof(Message));
-    pub_socket->send(zmq_message, zmq::send_flags::sndmore);
+    oneshot_mq->send(&message, sizeof(message), 255);
   }
 
   // tell the journal we are finished sending the image path
   message.tag = Message::FinishImagePath;
-  zmq_message.rebuild(&message, sizeof(Message));
-  pub_socket->send(zmq_message, zmq::send_flags::none);
+  oneshot_mq->send(&message, sizeof(message), 255);
 
   return Qnil;
 }
@@ -149,9 +151,7 @@ RB_METHOD(setJournalPosition) {
   Message message;
   message.tag = Message::SetWindowPosition;
   message.val.pos = {x, y};
-  zmq::message_t zmq_message(&message, sizeof(Message));
-
-  pub_socket->send(zmq_message, zmq::send_flags::none);
+  oneshot_mq->send(&message, sizeof(message), 255);
 
   return Qnil;
 }
@@ -159,33 +159,29 @@ RB_METHOD(setJournalPosition) {
 RB_METHOD(journalQuit) {
   Message message;
   message.tag = Message::Close;
-  zmq::message_t zmq_message(&message, sizeof(Message));
-
-  pub_socket->send(zmq_message, zmq::send_flags::none);
+  oneshot_mq->send(&message, sizeof(message), 255);
 
   active = false;
+
+  Debug() << "sending quit";
 
   return Qnil;
 }
 
 void cleanup_journal_stuff() {
-  zmq_ctx->shutdown();
-  delete pub_socket;
-  delete sub_socket;
-  delete zmq_ctx;
+  delete oneshot_mq;
+  delete journal_mq;
 }
 
 void oneshotJournalBindingInit() {
   mutex = SDL_CreateMutex();
 
-  zmq_ctx = new zmq::context_t(1);
-  pub_socket = new zmq::socket_t(*zmq_ctx, zmq::socket_type::push);
-  sub_socket = new zmq::socket_t(*zmq_ctx, zmq::socket_type::pull);
+  oneshot_mq =
+      new message_queue(open_or_create, "oneshot_mq", 100, sizeof(Message));
+  journal_mq =
+      new message_queue(open_or_create, "journal_mq", 100, sizeof(Message));
 
-  pub_socket->bind("tcp://localhost:9697");
-  sub_socket->connect("tcp://localhost:7969");
-
-  thread = SDL_CreateThread(server_thread, "journal server thread", NULL);
+  thread = SDL_CreateThread(server_thread_fn, "journal server thread", NULL);
 
   VALUE module = rb_define_module("Journal");
   _rb_define_module_function(module, "set", journalSet);
