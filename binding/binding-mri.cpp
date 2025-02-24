@@ -123,6 +123,7 @@ void modshotAleffectBindingInit();
 void modshotwindowBindingInit();
 void modshotSystemBindingInit();
 void osfmBindingInit();
+void osfmCameraBindingInit();
 
 RB_METHOD(mkxpDelta);
 RB_METHOD(mriPrint);
@@ -223,6 +224,7 @@ static void mriBindingInit() {
   modshotwindowBindingInit();
   modshotSystemBindingInit();
   osfmBindingInit();
+  osfmCameraBindingInit();
 
   VALUE _mkxp_module = rb_define_module("MKXP");
   _rb_define_module_function(_mkxp_module, "allow_force_quit",

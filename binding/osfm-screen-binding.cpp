@@ -63,7 +63,7 @@ DEF_TYPE_CUSTOMNAME_AND_FREE(MonitorWindow, "MonitorWindow",
                              free_monitor_window);
 
 #define GUARD_DISPOSED(w)                                                      \
-  if (!w->window)                                                              \
+  if (!w)                                                                      \
     rb_raise(rb_eRuntimeError, "Window already disposed!");
 
 RB_METHOD(monitorWindowInit) {

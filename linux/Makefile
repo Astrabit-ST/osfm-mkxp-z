@@ -247,7 +247,7 @@ $(DOWNLOADS)/sdl3_sound/cmakebuild/Makefile: $(DOWNLOADS)/sdl3_sound/CMakeLists.
 $(DOWNLOADS)/sdl3_sound/CMakeLists.txt:
 	$(CLONE) $(GITHUB)/icculus/SDL_sound $(DOWNLOADS)/sdl3_sound;
 # SDL_sound hasn't made an official sdl3 release yet
-	cd $(DOWNLOADS)/sdl3_sound; git checkout 9000c2b27a6aa210c5ceb5821deae396d67aa4cd;
+	cd $(DOWNLOADS)/sdl3_sound; git checkout f6a186bb5b2f6543b052afdace769f84322ea151;
 
 # SDL3 (ttf)
 sdl3ttf: init_dirs sdl3 $(LIBDIR)/libSDL3_ttf.a

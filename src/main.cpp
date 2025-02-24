@@ -222,7 +222,7 @@ int main(int argc, char *argv[]) {
 #endif
 
   /* initialize SDL first */
-  if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
+  if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | SDL_INIT_CAMERA)) {
     showInitError(std::string("Error initializing SDL: ") + SDL_GetError());
     return 0;
   }
