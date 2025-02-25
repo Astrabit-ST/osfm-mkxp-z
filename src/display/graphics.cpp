@@ -521,7 +521,8 @@ void PingPong::clearBuffers() {
 
 void PingPong::bind() { FBO::bind(rt[dstInd].fbo); }
 
-ScreenScene::ScreenScene(int width, int height) : pp(width, height) {
+ScreenScene::ScreenScene(int width, int height)
+    : pp(width, height), transparent(false) {
   updateReso(width, height);
 
   brightEffect = false;
