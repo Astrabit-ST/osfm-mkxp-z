@@ -1,9 +1,9 @@
 #include "binding-util.h"
+#include "debugwriter.h"
 #include "etc-internal.h"
 #include "eventthread.h"
 #include "gl-fun.h"
 #include "gl-meta.h"
-#include "gl-util.h"
 #include "graphics.h"
 #include "scene.h"
 #include "sharedstate.h"
@@ -21,7 +21,18 @@ struct MonitorWindow {
     EventThread::CreateWindowArgs args = {x, y, w, h, flags, name};
     window = shState->eThread().requestNewWindow(&args);
     shState->monitorWindows.insert(this);
-    render();
+    // It's important to disable vsync, so we do that on first draw.
+    SDL_GLContext ctx = shState->graphics().context();
+    // TODO throw an error if this fails (somehow)
+    SDL_GL_MakeCurrent(window, ctx);
+    bool success = SDL_GL_SetSwapInterval(0);
+    if (!success) {
+      Debug() << "[WARN]" << "Failed to disable vsync" << SDL_GetError();
+    }
+    gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
+    gl.ClearColor(0, 0, 0, 0);
+    gl.Clear(GL_COLOR_BUFFER_BIT);
+    SDL_GL_SwapWindow(window);
   }
   ~MonitorWindow() {
     shState->monitorWindows.erase(this);
