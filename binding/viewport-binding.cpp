@@ -41,62 +41,67 @@ DEF_ALLOCFUNC(Viewport);
 // more fun this way :3
 extern rb_data_type_t MonitorWindowType;
 struct MonitorWindow {
-    Scene* getScene();
+  Scene *getScene();
 };
 
 RB_METHOD(viewportInitialize) {
-    Viewport *v;
+  Viewport *v;
 
-    if (argc == 0 && rgssVer >= 3) {
-        GFX_LOCK;
-        v = new Viewport();
+  if (argc == 0 && rgssVer >= 3) {
+    GFX_LOCK;
+    v = new Viewport();
     // could either be a Rect or a Window
-    } else if (argc == 1 || argc == 2) {
-        VALUE rectObj;
-        VALUE monitorWindowObj = Qnil;
-        Rect *rect;
-        
-        rb_get_args(argc, argv, "o|o", &rectObj, &monitorWindowObj RB_ARG_END);
-        
-        rect = getPrivateDataCheck<Rect>(rectObj, RectType);
+  } else if (argc == 1 || argc == 2) {
+    VALUE rectObj;
+    VALUE monitorWindowObj = Qnil;
+    Rect *rect;
 
-        Scene *scene = nullptr;
-        if (!NIL_P(monitorWindowObj)) {
-            MonitorWindow* window = getPrivateDataCheck<MonitorWindow>(monitorWindowObj, MonitorWindowType);
-            scene = window->getScene();
-            rb_iv_set(self, "screen_window", monitorWindowObj); // so it doesn't get GC'd
-        }
-        
-        GFX_LOCK;
-        v = new Viewport(rect, scene);
-    } else {
-        int x, y, width, height;
-        VALUE monitorWindowObj = Qnil;
+    rb_get_args(argc, argv, "o|o", &rectObj, &monitorWindowObj RB_ARG_END);
 
-        rb_get_args(argc, argv, "iiii|o", &x, &y, &width, &height, &monitorWindowObj RB_ARG_END);
+    rect = getPrivateDataCheck<Rect>(rectObj, RectType);
 
-        Scene *scene = nullptr;
-        if (!NIL_P(monitorWindowObj)) {
-            MonitorWindow* window = getPrivateDataCheck<MonitorWindow>(monitorWindowObj, MonitorWindowType);
-            scene = window->getScene();
-            rb_iv_set(self, "screen_window", monitorWindowObj); // so it doesn't get GC'd
-        }
-        
-        GFX_LOCK;
-        v = new Viewport(x, y, width, height, scene);
+    Scene *scene = nullptr;
+    if (!NIL_P(monitorWindowObj)) {
+      MonitorWindow *window = getPrivateDataCheck<MonitorWindow>(
+          monitorWindowObj, MonitorWindowType);
+      scene = window->getScene();
+      rb_iv_set(self, "screen_window",
+                monitorWindowObj); // so it doesn't get GC'd
     }
-    
-    setPrivateData(self, v);
-    
-    /* Wrap property objects */
-    v->initDynAttribs();
-    
-    wrapProperty(self, &v->getRect(), "rect", RectType);
-    wrapProperty(self, &v->getColor(), "color", ColorType);
-    wrapProperty(self, &v->getTone(), "tone", ToneType);
-    
-    GFX_UNLOCK;
-    return self;
+
+    GFX_LOCK;
+    v = new Viewport(rect, scene);
+  } else {
+    int x, y, width, height;
+    VALUE monitorWindowObj = Qnil;
+
+    rb_get_args(argc, argv, "iiii|o", &x, &y, &width, &height,
+                &monitorWindowObj RB_ARG_END);
+
+    Scene *scene = nullptr;
+    if (!NIL_P(monitorWindowObj)) {
+      MonitorWindow *window = getPrivateDataCheck<MonitorWindow>(
+          monitorWindowObj, MonitorWindowType);
+      scene = window->getScene();
+      rb_iv_set(self, "screen_window",
+                monitorWindowObj); // so it doesn't get GC'd
+    }
+
+    GFX_LOCK;
+    v = new Viewport(x, y, width, height, scene);
+  }
+
+  setPrivateData(self, v);
+
+  /* Wrap property objects */
+  v->initDynAttribs();
+
+  wrapProperty(self, &v->getRect(), "rect", RectType);
+  wrapProperty(self, &v->getColor(), "color", ColorType);
+  wrapProperty(self, &v->getTone(), "tone", ToneType);
+
+  GFX_UNLOCK;
+  return self;
 }
 
 DEF_GFX_PROP_OBJ_VAL(Viewport, Rect, Rect, "rect")
@@ -106,56 +111,70 @@ DEF_GFX_PROP_OBJ_VAL(Viewport, Tone, Tone, "tone")
 DEF_GFX_PROP_I(Viewport, OX)
 DEF_GFX_PROP_I(Viewport, OY)
 
+RB_METHOD(setRGBOffset) {
+  double x, y, z;
+  double x2, y2, z2;
+  rb_get_args(argc, argv, "ffffff", &x, &y, &z, &x2, &y2, &z2);
 
-RB_METHOD(setRGBOffset)
-{
-	double x, y, z;
-	double x2, y2, z2;
-	rb_get_args(argc, argv, "ffffff", &x, &y, &z, &x2, &y2, &z2);
+  Viewport *v = getPrivateData<Viewport>(self);
 
-	Viewport *v = getPrivateData<Viewport>(self);
+  v->setRGBOffsetx(Vec4(x, y, z, 0));
+  v->setRGBOffsety(Vec4(x2, y2, z2, 0));
 
-	v->setRGBOffsetx(Vec4(x, y, z, 0));
-	v->setRGBOffsety(Vec4(x2, y2, z2, 0));
-
-	return Qnil;
+  return Qnil;
 }
 
-RB_METHOD(setCubicTime)
-{
-	double time;
-	rb_get_args(argc, argv, "f", &time);
+RB_METHOD(setCubicTime) {
+  double time;
+  rb_get_args(argc, argv, "f", &time);
 
-	Viewport *v = getPrivateData<Viewport>(self);
+  Viewport *v = getPrivateData<Viewport>(self);
 
-	v->setCubicTime(time);
+  v->setCubicTime(time);
 
-	return Qnil;
+  return Qnil;
 }
 
 DEF_GFX_PROP_B(Viewport, Scanned)
 
-void viewportBindingInit() {
-    VALUE klass = rb_define_class("Viewport", rb_cObject);
-#if RAPI_FULL > 187
-    rb_define_alloc_func(klass, classAllocate<&ViewportType>);
-#else
-    rb_define_alloc_func(klass, ViewportAllocate);
-#endif
-    
-    disposableBindingInit<Viewport>(klass);
-    flashableBindingInit<Viewport>(klass);
-    sceneElementBindingInit<Viewport>(klass);
-    
-    _rb_define_method(klass, "initialize", viewportInitialize);
-    
-    INIT_PROP_BIND(Viewport, Rect, "rect");
-    INIT_PROP_BIND(Viewport, OX, "ox");
-    INIT_PROP_BIND(Viewport, OY, "oy");
-    INIT_PROP_BIND(Viewport, Color, "color");
-    INIT_PROP_BIND(Viewport, Tone, "tone");
+void bitmapInitProps(Bitmap *b, VALUE self);
+RB_METHOD(viewportSnapToBitmap) {
+  RB_UNUSED_PARAM;
 
-    _rb_define_method(klass, "setRGBOffset", setRGBOffset);
-	_rb_define_method(klass, "setCubicTime", setCubicTime);
-    INIT_PROP_BIND( Viewport, Scanned, "scanned");
+  Viewport *v = getPrivateData<Viewport>(self);
+
+  Bitmap *result = 0;
+  result = v->snapToBitmap();
+
+  VALUE obj = wrapObject(result, BitmapType);
+  bitmapInitProps(result, obj);
+
+  return obj;
+}
+
+void viewportBindingInit() {
+  VALUE klass = rb_define_class("Viewport", rb_cObject);
+#if RAPI_FULL > 187
+  rb_define_alloc_func(klass, classAllocate<&ViewportType>);
+#else
+  rb_define_alloc_func(klass, ViewportAllocate);
+#endif
+
+  disposableBindingInit<Viewport>(klass);
+  flashableBindingInit<Viewport>(klass);
+  sceneElementBindingInit<Viewport>(klass);
+
+  _rb_define_method(klass, "initialize", viewportInitialize);
+
+  INIT_PROP_BIND(Viewport, Rect, "rect");
+  INIT_PROP_BIND(Viewport, OX, "ox");
+  INIT_PROP_BIND(Viewport, OY, "oy");
+  INIT_PROP_BIND(Viewport, Color, "color");
+  INIT_PROP_BIND(Viewport, Tone, "tone");
+
+  _rb_define_method(klass, "setRGBOffset", setRGBOffset);
+  _rb_define_method(klass, "setCubicTime", setCubicTime);
+  INIT_PROP_BIND(Viewport, Scanned, "scanned");
+
+  _rb_define_method(klass, "snap_to_bitmap", viewportSnapToBitmap);
 }

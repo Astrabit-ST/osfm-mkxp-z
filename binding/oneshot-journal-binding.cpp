@@ -24,9 +24,10 @@ static SDL_Mutex *mutex = NULL;
 static message_queue *oneshot_mq; // messages we send to journal
 static message_queue *journal_mq; // messages journal sends to us
 
-static volatile bool active = false;
+static volatile int active_count = 0;
 static volatile int journal_x = 0;
 static volatile int journal_y = 0;
+static volatile bool server_active = true;
 
 int server_thread_fn(void *data) {
 
@@ -54,17 +55,20 @@ int server_thread_fn(void *data) {
       auto abs_time = now + std::chrono::milliseconds(8);
       did_recv = journal_mq->timed_receive(&message, sizeof(message),
                                            recvd_size, priority, abs_time);
+      if (!server_active)
+        return 0;
     }
+
     switch (message.tag) {
     case Message::Hello:
-      active = true;
+      active_count++;
       break;
     case Message::WindowPosition:
       journal_x = message.val.pos.x;
       journal_y = message.val.pos.y;
       break;
     case Message::Goodbye:
-      active = false;
+      active_count--;
       break;
     default:
       Debug() << "Unhandled message tag";
@@ -81,7 +85,7 @@ RB_METHOD(journalSet) {
   rb_get_args(argc, argv, "z", &name RB_ARG_END);
 
   // if the journal is not active, return
-  if (!active)
+  if (active_count == 0)
     return Qnil;
 
   Message message;
@@ -92,7 +96,7 @@ RB_METHOD(journalSet) {
     message.tag = Message::Close;
     oneshot_mq->send(&message, sizeof(message), 255);
 
-    active = false;
+    active_count--;
 
     return Qnil;
   }
@@ -136,13 +140,13 @@ RB_METHOD(journalSetLang) {
 
 RB_METHOD(journalActive) {
   RB_UNUSED_PARAM;
-  return active ? Qtrue : Qfalse;
+  return active_count > 0 ? Qtrue : Qfalse;
 }
 
 RB_METHOD(journalPosition) {
   RB_UNUSED_PARAM;
 
-  if (!active)
+  if (active_count == 0)
     return Qnil;
 
   return rb_ary_new_from_args(2, INT2FIX(journal_x), RB_INT2FIX(journal_y));
@@ -165,7 +169,7 @@ RB_METHOD(journalQuit) {
   message.tag = Message::Close;
   oneshot_mq->send(&message, sizeof(message), 255);
 
-  active = false;
+  active_count--;
 
   Debug() << "sending quit";
 
@@ -173,6 +177,9 @@ RB_METHOD(journalQuit) {
 }
 
 void cleanup_journal_stuff() {
+  server_active = false;
+  SDL_WaitThread(thread, NULL);
+
   delete oneshot_mq;
   delete journal_mq;
 }

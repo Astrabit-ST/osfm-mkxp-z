@@ -22,71 +22,75 @@
 #ifndef VIEWPORT_H
 #define VIEWPORT_H
 
-#include "scene.h"
-#include "flashable.h"
+#include "bitmap.h"
 #include "disposable.h"
+#include "flashable.h"
+#include "scene.h"
 #include "util.h"
 
 struct ViewportPrivate;
 
-class Viewport : public Scene, public SceneElement, public Flashable, public Disposable
-{
+class Viewport : public Scene,
+                 public SceneElement,
+                 public Flashable,
+                 public Disposable {
 public:
-	Viewport(int x, int y, int width, int height, Scene* scene = 0);
-	Viewport(Rect *rect, Scene* scene = 0);
-	Viewport(Scene* scene = 0);
-	~Viewport();
+  Viewport(int x, int y, int width, int height, Scene *scene = 0);
+  Viewport(Rect *rect, Scene *scene = 0);
+  Viewport(Scene *scene = 0);
+  ~Viewport();
 
-	void update();
+  void update();
 
-	DECL_ATTR( Rect,  Rect&  )
-	DECL_ATTR( OX,    int    )
-	DECL_ATTR( OY,    int    )
-	DECL_ATTR( Color, Color& )
-	DECL_ATTR( Tone,  Tone&  )
-	DECL_ATTR( Scanned, bool )
-	DECL_ATTR( RGBOffsetx, Vec4 )
-	DECL_ATTR( RGBOffsety, Vec4 )
-	DECL_ATTR( CubicTime, float )
+  DECL_ATTR(Rect, Rect &)
+  DECL_ATTR(OX, int)
+  DECL_ATTR(OY, int)
+  DECL_ATTR(Color, Color &)
+  DECL_ATTR(Tone, Tone &)
+  DECL_ATTR(Scanned, bool)
+  DECL_ATTR(RGBOffsetx, Vec4)
+  DECL_ATTR(RGBOffsety, Vec4)
+  DECL_ATTR(CubicTime, float)
 
-	void initDynAttribs();
+  void initDynAttribs();
+
+  Bitmap *snapToBitmap();
 
 private:
-	void initViewport(int x, int y, int width, int height);
-	void geometryChanged();
+  void initViewport(int x, int y, int width, int height);
+  void geometryChanged();
 
-	void composite();
-	void draw();
-	void onGeometryChange(const Geometry &);
-	bool isEffectiveViewport(Rect *&, Color *&, Tone *&) const;
+  void composite();
+  void draw();
+  void onGeometryChange(const Geometry &);
+  bool isEffectiveViewport(Rect *&, Color *&, Tone *&) const;
 
-	void releaseResources();
-	const char *klassName() const { return "viewport"; }
+  void releaseResources();
+  const char *klassName() const { return "viewport"; }
 
-	ABOUT_TO_ACCESS_DISP
+  ABOUT_TO_ACCESS_DISP
 
-	ViewportPrivate *p;
-	friend struct ViewportPrivate;
+  ViewportPrivate *p;
+  friend struct ViewportPrivate;
 
-	IntruListLink<Scene> sceneLink;
+  IntruListLink<Scene> sceneLink;
 };
 
-class ViewportElement : public SceneElement
-{
+class ViewportElement : public SceneElement {
 public:
-	ViewportElement(Viewport *viewport = 0, int z = 0, int spriteY = 0);
-	~ViewportElement();
+  ViewportElement(Viewport *viewport = 0, int z = 0, int spriteY = 0);
+  ~ViewportElement();
 
-	DECL_ATTR( Viewport,  Viewport* )
+  DECL_ATTR(Viewport, Viewport *)
 
 protected:
-	virtual void onViewportChange() {}
+  virtual void onViewportChange() {}
 
 private:
-	Viewport *m_viewport;
-	sigslot::connection viewportDispCon;
-	sigslot::connection viewportElementDispCon;
-	void viewportElementDisposal();
+  Viewport *m_viewport;
+  sigslot::connection viewportDispCon;
+  sigslot::connection viewportElementDispCon;
+  void viewportElementDisposal();
 };
 
 #endif // VIEWPORT_H

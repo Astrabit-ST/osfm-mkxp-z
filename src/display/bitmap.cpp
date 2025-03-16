@@ -741,8 +741,20 @@ Bitmap::Bitmap(const Bitmap &other, int frame) {
   p->addTaintedArea(rect());
 }
 
-Bitmap::Bitmap(TEXFBO &other) {
+// I really don't like taking an extra parameter to take ownership of the fbo,
+// but tbh, I really don't know how.
+Bitmap::Bitmap(TEXFBO &other, bool owned) {
   Bitmap *hiresBitmap = nullptr;
+
+  if (owned) {
+    p = new BitmapPrivate(this);
+    p->selfHires = hiresBitmap;
+    p->gl = other;
+
+    p->addTaintedArea(rect());
+
+    return;
+  }
 
   if (other.selfHires != nullptr) {
     // Create a high-res version as well.

@@ -35,148 +35,135 @@ struct SDL_Surface;
 
 struct BitmapPrivate;
 // FIXME make this class use proper RGSS classes again
-class Bitmap : public Disposable
-{
+class Bitmap : public Disposable {
 public:
-	Bitmap(const char *filename);
-	Bitmap(int width, int height, bool isHires = false);
-	Bitmap(void *pixeldata, int width, int height);
-	Bitmap(TEXFBO &other);
-	Bitmap(SDL_Surface *imgSurf, SDL_Surface *imgSurfHires, bool forceMega = false);
+  Bitmap(const char *filename);
+  Bitmap(int width, int height, bool isHires = false);
+  Bitmap(void *pixeldata, int width, int height);
+  Bitmap(SDL_Surface *imgSurf, SDL_Surface *imgSurfHires,
+         bool forceMega = false);
 
-	/* Clone constructor */
-    
-    // frame is -2 for "any and all", -1 for "current", anything else for a specific frame
-	Bitmap(const Bitmap &other, int frame = -2);
-	~Bitmap();
+  Bitmap(TEXFBO &other, bool owned = false);
+  /* Clone constructor */
 
-	void initFromSurface(SDL_Surface *imgSurf, Bitmap *hiresBitmap, bool forceMega = false);
+  // frame is -2 for "any and all", -1 for "current", anything else for a
+  // specific frame
+  Bitmap(const Bitmap &other, int frame = -2);
+  ~Bitmap();
 
-	int width()  const;
-	int height() const;
-	bool hasHires() const;
-	DECL_ATTR(Hires, Bitmap*)
-	void setLores(Bitmap *lores);
-	bool isMega() const;
-    bool isAnimated() const;
+  void initFromSurface(SDL_Surface *imgSurf, Bitmap *hiresBitmap,
+                       bool forceMega = false);
 
-	IntRect rect() const;
+  int width() const;
+  int height() const;
+  bool hasHires() const;
+  DECL_ATTR(Hires, Bitmap *)
+  void setLores(Bitmap *lores);
+  bool isMega() const;
+  bool isAnimated() const;
 
-	void blt(int x, int y,
-	         const Bitmap &source, const IntRect &rect,
-	         int opacity = 255);
+  IntRect rect() const;
 
-	void stretchBlt(IntRect destRect,
-	                const Bitmap &source, IntRect sourceRect,
-	                int opacity = 255, bool smooth = false);
+  void blt(int x, int y, const Bitmap &source, const IntRect &rect,
+           int opacity = 255);
 
-	void fillRect(int x, int y,
-	              int width, int height,
-	              const Vec4 &color);
-	void fillRect(const IntRect &rect, const Vec4 &color);
+  void stretchBlt(IntRect destRect, const Bitmap &source, IntRect sourceRect,
+                  int opacity = 255, bool smooth = false);
 
-	void gradientFillRect(int x, int y,
-	                      int width, int height,
-	                      const Vec4 &color1, const Vec4 &color2,
-	                      bool vertical = false);
-	void gradientFillRect(const IntRect &rect,
-	                      const Vec4 &color1, const Vec4 &color2,
-	                      bool vertical = false);
+  void fillRect(int x, int y, int width, int height, const Vec4 &color);
+  void fillRect(const IntRect &rect, const Vec4 &color);
 
-	void clearRect(int x, int y,
-	               int width, int height);
-	void clearRect(const IntRect &rect);
+  void gradientFillRect(int x, int y, int width, int height, const Vec4 &color1,
+                        const Vec4 &color2, bool vertical = false);
+  void gradientFillRect(const IntRect &rect, const Vec4 &color1,
+                        const Vec4 &color2, bool vertical = false);
 
-	void blur();
-	void radialBlur(int angle, int divisions);
+  void clearRect(int x, int y, int width, int height);
+  void clearRect(const IntRect &rect);
 
-	void clear();
+  void blur();
+  void radialBlur(int angle, int divisions);
 
-	Color getPixel(int x, int y) const;
-	void setPixel(int x, int y, const Color &color);
-    
-    bool getRaw(void *output, int output_size);
-    void replaceRaw(void *pixel_data, int size);
-    void saveToFile(const char *filename);
+  void clear();
 
-	void hueChange(int hue);
+  Color getPixel(int x, int y) const;
+  void setPixel(int x, int y, const Color &color);
 
-	enum TextAlign
-	{
-		Left = 0,
-		Center = 1,
-		Right = 2
-	};
+  bool getRaw(void *output, int output_size);
+  void replaceRaw(void *pixel_data, int size);
+  void saveToFile(const char *filename);
 
-	void drawText(int x, int y,
-	              int width, int height,
-	              const char *str, int align = Left);
+  void hueChange(int hue);
 
-	void drawText(const IntRect &rect,
-	              const char *str, int align = Left);
+  enum TextAlign { Left = 0, Center = 1, Right = 2 };
 
-	IntRect textSize(const char *str);
+  void drawText(int x, int y, int width, int height, const char *str,
+                int align = Left);
 
-	DECL_ATTR(Font, Font&)
+  void drawText(const IntRect &rect, const char *str, int align = Left);
 
-	/* Sets initial reference without copying by value,
-	 * use at construction */
-	void setInitFont(Font *value);
+  IntRect textSize(const char *str);
 
-	/* <internal> */
-	TEXFBO &getGLTypes() const;
-    SDL_Surface *surface() const;
-	SDL_Surface *megaSurface() const;
-	void ensureNonMega() const;
-    void ensureNonAnimated() const;
-    void ensureAnimated() const;
-    
-    // Animation functions
-    void stop();
-    void play();
-    bool isPlaying() const;
-    void gotoAndStop(int frame);
-    void gotoAndPlay(int frame);
-    int numFrames() const;
-    int currentFrameI() const;
-    
-    int addFrame(Bitmap &source, int position = -1);
-    void removeFrame(int position = -1);
-    
-    void nextFrame();
-    void previousFrame();
-    std::vector<TEXFBO> &getFrames() const;
-    
-    void setAnimationFPS(float FPS);
-    float getAnimationFPS() const;
-    
-    void setLooping(bool loop);
-    bool getLooping() const;
+  DECL_ATTR(Font, Font &)
 
-    void ensureNotPlaying() const;
-    // ----------
-    
-	/* Binds the backing texture and sets the correct
-	 * texture size uniform in shader */
-	void bindTex(ShaderBase &shader, bool substituteLoresSize = true);
+  /* Sets initial reference without copying by value,
+   * use at construction */
+  void setInitFont(Font *value);
 
-	/* Adds 'rect' to tainted area */
-	void taintArea(const IntRect &rect);
+  /* <internal> */
+  TEXFBO &getGLTypes() const;
+  SDL_Surface *surface() const;
+  SDL_Surface *megaSurface() const;
+  void ensureNonMega() const;
+  void ensureNonAnimated() const;
+  void ensureAnimated() const;
 
-	sigslot::signal<> modified;
+  // Animation functions
+  void stop();
+  void play();
+  bool isPlaying() const;
+  void gotoAndStop(int frame);
+  void gotoAndPlay(int frame);
+  int numFrames() const;
+  int currentFrameI() const;
 
-	static int maxSize();
+  int addFrame(Bitmap &source, int position = -1);
+  void removeFrame(int position = -1);
 
-    void assumeRubyGC();
+  void nextFrame();
+  void previousFrame();
+  std::vector<TEXFBO> &getFrames() const;
+
+  void setAnimationFPS(float FPS);
+  float getAnimationFPS() const;
+
+  void setLooping(bool loop);
+  bool getLooping() const;
+
+  void ensureNotPlaying() const;
+  // ----------
+
+  /* Binds the backing texture and sets the correct
+   * texture size uniform in shader */
+  void bindTex(ShaderBase &shader, bool substituteLoresSize = true);
+
+  /* Adds 'rect' to tainted area */
+  void taintArea(const IntRect &rect);
+
+  sigslot::signal<> modified;
+
+  static int maxSize();
+
+  void assumeRubyGC();
 
 private:
-	void releaseResources();
-	sigslot::connection loresDispCon;
-	const char *klassName() const { return "bitmap"; }
+  void releaseResources();
+  sigslot::connection loresDispCon;
+  const char *klassName() const { return "bitmap"; }
 
-	BitmapPrivate *p;
+  BitmapPrivate *p;
 
-	void loresDisposal();
+  void loresDisposal();
 };
 
 #endif // BITMAP_H

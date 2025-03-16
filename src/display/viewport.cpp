@@ -21,266 +21,237 @@
 
 #include "viewport.h"
 
-#include "scene.h"
-#include "sharedstate.h"
 #include "etc.h"
-#include "util.h"
-#include "quad.h"
+#include "gl-util.h"
 #include "glstate.h"
 #include "graphics.h"
+#include "quad.h"
+#include "scene.h"
+#include "sharedstate.h"
+#include "texpool.h"
+#include "util.h"
 
 #include <SDL3/SDL_rect.h>
 
 #include "sigslot/signal.hpp"
 
-struct ViewportPrivate
-{
-	/* Needed for geometry changes */
-	Viewport *self;
+struct ViewportPrivate {
+  /* Needed for geometry changes */
+  Viewport *self;
 
-	Rect *rect;
-	sigslot::connection rectCon;
+  Rect *rect;
+  sigslot::connection rectCon;
 
-	Color *color;
-	Tone *tone;
+  Color *color;
+  Tone *tone;
 
-	IntRect screenRect;
-	int isOnScreen;
+  IntRect screenRect;
+  int isOnScreen;
 
-	bool scanned;
+  bool scanned;
 
-	Vec4 rgbOffsetx;
-	Vec4 rgbOffsety;
+  Vec4 rgbOffsetx;
+  Vec4 rgbOffsety;
 
-	float cubicTime;
+  float cubicTime;
 
-	EtcTemps tmp;
+  EtcTemps tmp;
 
-	ViewportPrivate(int x, int y, int width, int height, Viewport *self)
-	    : self(self),
-	      rect(&tmp.rect),
-	      color(&tmp.color),
-	      tone(&tmp.tone),
-	      isOnScreen(false),
-				scanned(false),
-		  	rgbOffsetx(Vec4(0, 0, 0, 0)),
-		  	rgbOffsety(Vec4(0, 0, 0, 0)),
-		  	cubicTime(0.0)
-	{
-		rect->set(x, y, width, height);
-		updateRectCon();
-	}
+  ViewportPrivate(int x, int y, int width, int height, Viewport *self)
+      : self(self), rect(&tmp.rect), color(&tmp.color), tone(&tmp.tone),
+        isOnScreen(false), scanned(false), rgbOffsetx(Vec4(0, 0, 0, 0)),
+        rgbOffsety(Vec4(0, 0, 0, 0)), cubicTime(0.0) {
+    rect->set(x, y, width, height);
+    updateRectCon();
+  }
 
-	~ViewportPrivate()
-	{
-		rectCon.disconnect();
-	}
+  ~ViewportPrivate() { rectCon.disconnect(); }
 
-	void onRectChange()
-	{
-		self->geometry.rect = rect->toIntRect();
-		self->notifyGeometryChange();
-		recomputeOnScreen();
-	}
+  void onRectChange() {
+    self->geometry.rect = rect->toIntRect();
+    self->notifyGeometryChange();
+    recomputeOnScreen();
+  }
 
-	void updateRectCon()
-	{
-		rectCon.disconnect();
-		rectCon = rect->valueChanged.connect
-		        (&ViewportPrivate::onRectChange, this);
-	}
+  void updateRectCon() {
+    rectCon.disconnect();
+    rectCon = rect->valueChanged.connect(&ViewportPrivate::onRectChange, this);
+  }
 
-	void recomputeOnScreen()
-	{
-		SDL_Rect r1 = { screenRect.x, screenRect.y,
-		                screenRect.w, screenRect.h };
+  void recomputeOnScreen() {
+    SDL_Rect r1 = {screenRect.x, screenRect.y, screenRect.w, screenRect.h};
 
-		SDL_Rect r2 = { rect->x,     rect->y,
-		                rect->width, rect->height };
+    SDL_Rect r2 = {rect->x, rect->y, rect->width, rect->height};
 
-		SDL_Rect result;
-		isOnScreen = SDL_GetRectIntersection(&r1, &r2, &result);
-	}
+    SDL_Rect result;
+    isOnScreen = SDL_GetRectIntersection(&r1, &r2, &result);
+  }
 
-	bool needsEffectRender(bool flashing)
-	{
-		bool rectEffective = !rect->isEmpty();
-		bool colorToneEffective = color->hasEffect() || tone->hasEffect() || flashing;
-		bool otherEffectActive = rgbOffsetx.xyzNotNull() || rgbOffsety.xyzNotNull() || cubicTime != 0.0;
+  bool needsEffectRender(bool flashing) {
+    bool rectEffective = !rect->isEmpty();
+    bool colorToneEffective =
+        color->hasEffect() || tone->hasEffect() || flashing;
+    bool otherEffectActive = rgbOffsetx.xyzNotNull() ||
+                             rgbOffsety.xyzNotNull() || cubicTime != 0.0 ||
+                             scanned;
 
-		return (rectEffective && (colorToneEffective || otherEffectActive) && isOnScreen);
-	}
+    return (rectEffective && (colorToneEffective || otherEffectActive) &&
+            isOnScreen);
+  }
 };
 
 Viewport::Viewport(int x, int y, int width, int height, Scene *scene)
-    : SceneElement(scene ? *scene : *shState->screen()),
-      sceneLink(this)
-{
-	initViewport(x, y, width, height);
+    : SceneElement(scene ? *scene : *shState->screen()), sceneLink(this) {
+  initViewport(x, y, width, height);
 }
 
 Viewport::Viewport(Rect *rect, Scene *scene)
-    : SceneElement(scene ? *scene : *shState->screen()),
-      sceneLink(this)
-{
-	initViewport(rect->x, rect->y, rect->width, rect->height);
+    : SceneElement(scene ? *scene : *shState->screen()), sceneLink(this) {
+  initViewport(rect->x, rect->y, rect->width, rect->height);
 }
 
 Viewport::Viewport(Scene *scene)
-    : SceneElement(scene ? *scene : *shState->screen()),
-      sceneLink(this)
-{
-	const Graphics &graphics = shState->graphics();
-	initViewport(0, 0, graphics.width(), graphics.height());
+    : SceneElement(scene ? *scene : *shState->screen()), sceneLink(this) {
+  const Graphics &graphics = shState->graphics();
+  initViewport(0, 0, graphics.width(), graphics.height());
 }
 
-void Viewport::initViewport(int x, int y, int width, int height)
-{
-	p = new ViewportPrivate(x, y, width, height, this);
+void Viewport::initViewport(int x, int y, int width, int height) {
+  p = new ViewportPrivate(x, y, width, height, this);
 
-	/* Set our own geometry */
-	geometry.rect = IntRect(x, y, width, height);
+  /* Set our own geometry */
+  geometry.rect = IntRect(x, y, width, height);
 
-	/* Handle parent geometry */
-	onGeometryChange(scene->getGeometry());
+  /* Handle parent geometry */
+  onGeometryChange(scene->getGeometry());
 }
 
-Viewport::~Viewport()
-{
-	dispose();
+Viewport::~Viewport() { dispose(); }
+
+void Viewport::update() {
+  guardDisposed();
+
+  Flashable::update();
 }
 
-void Viewport::update()
-{
-	guardDisposed();
+DEF_ATTR_RD_SIMPLE(Viewport, OX, int, geometry.orig.x)
+DEF_ATTR_RD_SIMPLE(Viewport, OY, int, geometry.orig.y)
 
-	Flashable::update();
-}
-
-DEF_ATTR_RD_SIMPLE(Viewport, OX,   int,   geometry.orig.x)
-DEF_ATTR_RD_SIMPLE(Viewport, OY,   int,   geometry.orig.y)
-
-DEF_ATTR_SIMPLE(Viewport, Rect,  Rect&,  *p->rect)
-DEF_ATTR_SIMPLE(Viewport, Color, Color&, *p->color)
-DEF_ATTR_SIMPLE(Viewport, Tone,  Tone&,  *p->tone)
+DEF_ATTR_SIMPLE(Viewport, Rect, Rect &, *p->rect)
+DEF_ATTR_SIMPLE(Viewport, Color, Color &, *p->color)
+DEF_ATTR_SIMPLE(Viewport, Tone, Tone &, *p->tone)
 DEF_ATTR_SIMPLE(Viewport, Scanned, bool, p->scanned)
 DEF_ATTR_SIMPLE(Viewport, CubicTime, float, p->cubicTime)
 DEF_ATTR_SIMPLE(Viewport, RGBOffsetx, Vec4, p->rgbOffsetx)
 DEF_ATTR_SIMPLE(Viewport, RGBOffsety, Vec4, p->rgbOffsety)
 
-void Viewport::setOX(int value)
-{
-	guardDisposed();
+void Viewport::setOX(int value) {
+  guardDisposed();
 
-	if (geometry.orig.x == value)
-		return;
+  if (geometry.orig.x == value)
+    return;
 
-	geometry.orig.x = value;
-	notifyGeometryChange();
+  geometry.orig.x = value;
+  notifyGeometryChange();
 }
 
-void Viewport::setOY(int value)
-{
-	guardDisposed();
+void Viewport::setOY(int value) {
+  guardDisposed();
 
-	if (geometry.orig.y == value)
-		return;
+  if (geometry.orig.y == value)
+    return;
 
-	geometry.orig.y = value;
-	notifyGeometryChange();
+  geometry.orig.y = value;
+  notifyGeometryChange();
 }
 
-void Viewport::initDynAttribs()
-{
-	p->rect = new Rect(*p->rect);
-	p->color = new Color;
-	p->tone = new Tone;
+void Viewport::initDynAttribs() {
+  p->rect = new Rect(*p->rect);
+  p->color = new Color;
+  p->tone = new Tone;
 
-	p->updateRectCon();
+  p->updateRectCon();
 }
 
 /* Scene */
-void Viewport::composite()
-{
-	if (emptyFlashFlag)
-		return;
+void Viewport::composite() {
+  if (emptyFlashFlag)
+    return;
 
-	bool renderEffect = p->needsEffectRender(flashing);
+  bool renderEffect = p->needsEffectRender(flashing);
 
-	if (elements.getSize() == 0 && !renderEffect)
-		return;
+  if (elements.getSize() == 0 && !renderEffect)
+    return;
 
-	/* Setup scissor */
-	glState.scissorTest.pushSet(true);
-	glState.scissorBox.pushSet(p->rect->toIntRect());
+  /* Setup scissor */
+  glState.scissorTest.pushSet(true);
+  glState.scissorBox.pushSet(p->rect->toIntRect());
 
-	Scene::composite();
+  Scene::composite();
 
-	/* If any effects are visible, request parent Scene to
-	 * render them. */
-	if (renderEffect)
-		scene->requestViewportRender
-		        (p->color->norm, flashColor, p->tone->norm, p->scanned, p->rgbOffsetx, p->rgbOffsety, p->cubicTime);
+  /* If any effects are visible, request parent Scene to
+   * render them. */
+  if (renderEffect)
+    scene->requestViewportRender(p->color->norm, flashColor, p->tone->norm,
+                                 p->scanned, p->rgbOffsetx, p->rgbOffsety,
+                                 p->cubicTime);
 
-	glState.scissorBox.pop();
-	glState.scissorTest.pop();
+  glState.scissorBox.pop();
+  glState.scissorTest.pop();
+}
+
+Bitmap *Viewport::snapToBitmap() {
+  TEXFBO bitmap = shState->texPool().request(p->rect->width, p->rect->height);
+  FBO::bind(bitmap.fbo);
+  FBO::clear();
+
+  Scene::composite();
+
+  return new Bitmap(bitmap, true);
 }
 
 /* SceneElement */
-void Viewport::draw()
-{
-	composite();
+void Viewport::draw() { composite(); }
+
+void Viewport::onGeometryChange(const Geometry &geo) {
+  p->screenRect = geo.rect;
+  p->recomputeOnScreen();
 }
 
-void Viewport::onGeometryChange(const Geometry &geo)
-{
-	p->screenRect = geo.rect;
-	p->recomputeOnScreen();
+void Viewport::releaseResources() {
+  unlink();
+
+  delete p;
 }
-
-void Viewport::releaseResources()
-{
-	unlink();
-
-	delete p;
-}
-
 
 ViewportElement::ViewportElement(Viewport *viewport, int z, int spriteY)
     : SceneElement(viewport ? *viewport : *shState->screen(), z, spriteY),
-      m_viewport(viewport)
-{
-	if (rgssVer == 1 && viewport)
-		viewportDispCon = viewport->wasDisposed.connect(&ViewportElement::viewportElementDisposal, this);
+      m_viewport(viewport) {
+  if (rgssVer == 1 && viewport)
+    viewportDispCon = viewport->wasDisposed.connect(
+        &ViewportElement::viewportElementDisposal, this);
 }
 
-Viewport *ViewportElement::getViewport() const
-{
-	return m_viewport;
+Viewport *ViewportElement::getViewport() const { return m_viewport; }
+
+void ViewportElement::setViewport(Viewport *viewport) {
+  m_viewport = viewport;
+
+  viewportDispCon.disconnect();
+  if (rgssVer == 1 && viewport)
+    viewportDispCon = viewport->wasDisposed.connect(
+        &ViewportElement::viewportElementDisposal, this);
+
+  setScene(viewport ? *viewport : *shState->screen());
+  onViewportChange();
+  onGeometryChange(scene->getGeometry());
 }
 
-void ViewportElement::setViewport(Viewport *viewport)
-{
-	m_viewport = viewport;
-	
-	viewportDispCon.disconnect();
-	if (rgssVer == 1 && viewport)
-		viewportDispCon = viewport->wasDisposed.connect(&ViewportElement::viewportElementDisposal, this);
-	
-	setScene(viewport ? *viewport : *shState->screen());
-	onViewportChange();
-	onGeometryChange(scene->getGeometry());
+void ViewportElement::viewportElementDisposal() {
+  viewportDispCon.disconnect();
+  Disposable *self = dynamic_cast<Disposable *>(this);
+  if (self != nullptr)
+    self->dispose();
 }
 
-void ViewportElement::viewportElementDisposal()
-{
-	viewportDispCon.disconnect();
-	Disposable *self = dynamic_cast<Disposable*>(this);
-	if(self != nullptr)
-		self->dispose();
-}
-
-ViewportElement::~ViewportElement()
-{
-	viewportDispCon.disconnect();
-}
+ViewportElement::~ViewportElement() { viewportDispCon.disconnect(); }
