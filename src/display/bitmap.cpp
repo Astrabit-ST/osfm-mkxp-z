@@ -1769,7 +1769,7 @@ void Bitmap::saveToFile(const char *filename) {
   }
 
   std::string fn_normalized = shState->fileSystem().normalize(filename, 1, 1);
-  int rc;
+  bool rc;
   switch (filetype) {
   case 2:
     rc = IMG_SaveJPG(surf, fn_normalized.c_str(), 90);
@@ -1786,7 +1786,7 @@ void Bitmap::saveToFile(const char *filename) {
   if (!p->surface && !p->megaSurface)
     SDL_DestroySurface(surf);
 
-  if (rc)
+  if (!rc)
     throw Exception(Exception::SDLError, "%s", SDL_GetError());
 }
 
