@@ -1,5 +1,6 @@
 #include "SDL3/SDL_video.h"
 #include "binding-util.h"
+#include "debugwriter.h"
 #include "eventthread.h"
 #include "graphics.h"
 #include "oneshot.h"
@@ -112,6 +113,15 @@ RB_METHOD(GetTransparent) {
   return rb_bool_new(val);
 }
 
+RB_METHOD(WindowPosSupported) {
+  RB_UNUSED_PARAM;
+  bool val = SDL_GetWindowPosition(shState->rtData().window, NULL, NULL);
+  if (!val) {
+    Debug() << "[WARN] Window pos not supported:" << SDL_GetError();
+  }
+  return rb_bool_new(val);
+}
+
 void modshotwindowBindingInit() {
   VALUE module = rb_define_module("ModWindow");
   _rb_define_module_function(module, "GetWindowPosition", GetWindowPosition);
@@ -124,6 +134,7 @@ void modshotwindowBindingInit() {
   _rb_define_module_function(module, "raiseWindow", WindowRaise);
   _rb_define_module_function(module, "transparent", GetTransparent);
   _rb_define_module_function(module, "transparent=", SetTransparent);
+  _rb_define_module_function(module, "pos_supported", WindowPosSupported);
   //_rb_define_module_function(module, "setWindowChromaKey",
   // SetTransparentColor);
 }
