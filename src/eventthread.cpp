@@ -61,8 +61,8 @@
 #include <string.h>
 
 #ifndef MKXPZ_NO_OPENAL
-typedef void(ALC_APIENTRY *LPALCDEVICEPAUSESOFT)(ALCdevice *device);
-typedef void(ALC_APIENTRY *LPALCDEVICERESUMESOFT)(ALCdevice *device);
+typedef void (ALC_APIENTRY*LPALCDEVICEPAUSESOFT)(ALCdevice *device) noexcept;
+typedef void (ALC_APIENTRY*LPALCDEVICERESUMESOFT)(ALCdevice *device) noexcept;
 
 #define AL_DEVICE_PAUSE_FUN                                                    \
   AL_FUN(DevicePause, LPALCDEVICEPAUSESOFT)                                    \

@@ -24,6 +24,7 @@ CLONE := $(GIT) clone -q
 GITHUB := https://github.com
 
 CONFIGURE_ENV := \
+	CMAKE_POLICY_VERSION_MINIMUM=3.10 \
 	PKG_CONFIG_LIBDIR=$(PKG_CONFIG_LIBDIR) \
 	CC="$(CC)" CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)"
 
@@ -128,19 +129,19 @@ $(DOWNLOADS)/pixman/autogen.sh:
 # iconv
 iconv: init_dirs $(LIBDIR)/libiconv.a
 
-$(LIBDIR)/libiconv.a: $(DOWNLOADS)/libiconv-1.16/Makefile
-	cd $(DOWNLOADS)/libiconv-1.16; make; make install
+$(LIBDIR)/libiconv.a: $(DOWNLOADS)/libiconv-1.18/Makefile
+	cd $(DOWNLOADS)/libiconv-1.18; make; make install
 
-$(DOWNLOADS)/libiconv-1.16/Makefile: $(DOWNLOADS)/libiconv-1.16/configure
-	cd $(DOWNLOADS)/libiconv-1.16; \
+$(DOWNLOADS)/libiconv-1.18/Makefile: $(DOWNLOADS)/libiconv-1.18/configure
+	cd $(DOWNLOADS)/libiconv-1.18; \
 	$(CONFIGURE) --enable-static=true --enable-shared=false
 
-$(DOWNLOADS)/libiconv-1.16/configure: $(DOWNLOADS)/libiconv-1.16.tar.gz
+$(DOWNLOADS)/libiconv-1.18/configure: $(DOWNLOADS)/libiconv-1.18.tar.gz
 	cd $(DOWNLOADS); \
-	tar -xzf libiconv-1.16.tar.gz;
+	tar -xzf libiconv-1.18.tar.gz;
 
-$(DOWNLOADS)/libiconv-1.16.tar.gz:
-	wget https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.16.tar.gz -P $(DOWNLOADS)
+$(DOWNLOADS)/libiconv-1.18.tar.gz:
+	wget https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.18.tar.gz -P $(DOWNLOADS)
 
 # uchardet
 uchardet: init_dirs $(LIBDIR)/libuchardet.a
@@ -278,21 +279,7 @@ $(DOWNLOADS)/openal/cmakebuild/Makefile: $(DOWNLOADS)/openal/CMakeLists.txt
 	$(CMAKE) -DLIBTYPE=STATIC -DALSOFT_EXAMPLES=no -DALSOFT_UTILS=no $(OPENAL_FLAGS)
 
 $(DOWNLOADS)/openal/CMakeLists.txt:
-	$(CLONE) $(GITHUB)/mkxp-z/openal-soft $(DOWNLOADS)/openal
-
-# FluidSynth
-fluidsynth: init_dirs $(LIBDIR)/libfluidsynth.a
-
-$(LIBDIR)/libfluidsynth.a: $(DOWNLOADS)/fluidsynth/cmakebuild/Makefile
-	cd $(DOWNLOADS)/fluidsynth/cmakebuild; \
-	make -j$(NPROC); make install
-
-$(DOWNLOADS)/fluidsynth/cmakebuild/Makefile: $(DOWNLOADS)/fluidsynth/CMakeLists.txt
-	cd $(DOWNLOADS)/fluidsynth; mkdir cmakebuild; cd cmakebuild; \
-	$(CMAKE) -DBUILD_SHARED_LIBS=no -Denable-sdl2=no -Denable-readline=no
-
-$(DOWNLOADS)/fluidsynth/CMakeLists.txt:
-	$(CLONE) $(GITHUB)/mkxp-z/fluidsynth-sans-glib $(DOWNLOADS)/fluidsynth
+	$(CLONE) $(GITHUB)/kcat/openal-soft $(DOWNLOADS)/openal --branch 1.24.3
 
 # OpenSSL
 openssl: init_dirs $(LIBDIR)/libssl.a
@@ -311,24 +298,22 @@ $(DOWNLOADS)/openssl/Configure:
 	$(CLONE) $(GITHUB)/openssl/openssl $(DOWNLOADS)/openssl --single-branch --branch openssl-3.0.12 --depth 1
 
 # Standard ruby
-ruby: init_dirs openssl $(LIBDIR)/libruby.so.3.1
+ruby: init_dirs openssl $(LIBDIR)/libruby.so.3.4
 
-$(LIBDIR)/libruby.so.3.1: $(DOWNLOADS)/ruby/Makefile
+$(LIBDIR)/libruby.so.3.4: $(DOWNLOADS)/ruby/Makefile
 	cd $(DOWNLOADS)/ruby; \
 	make -j$(NPROC); make install DESTDIR="$(BUILD_PREFIX)"
 
 $(DOWNLOADS)/ruby/Makefile: $(DOWNLOADS)/ruby/configure
 	cd $(DOWNLOADS)/ruby; \
 	export $(CONFIGURE_ENV); \
-	export CFLAGS="-flto $$CFLAGS"; \
-	export LDFLAGS="-flto $$LDFLAGS"; \
 	./configure $(CONFIGURE_ARGS) $(RUBY_CONFIGURE_ARGS) $(RUBY_FLAGS)
 
 $(DOWNLOADS)/ruby/configure: $(DOWNLOADS)/ruby/configure.ac
 	cd $(DOWNLOADS)/ruby; autoreconf -i
 
 $(DOWNLOADS)/ruby/configure.ac:
-	$(CLONE) $(GITHUB)/ruby/ruby $(DOWNLOADS)/ruby --single-branch --branch v3_1_4 --depth 1;
+	$(CLONE) $(GITHUB)/ruby/ruby $(DOWNLOADS)/ruby --single-branch --branch v3_4_4 --depth 1;
 
 # ====
 init_dirs:
@@ -339,5 +324,5 @@ powerwash: clean-downloads
 clean-downloads:
 	-rm -rf downloads
 
-deps-core: libtheora libvorbis pixman libpng physfs sdl3 sdl3image sdl3sound sdl3ttf openal openssl fluidsynth uchardet iconv
+deps-core: libtheora libvorbis pixman libpng physfs sdl3 sdl3image sdl3sound sdl3ttf openal openssl uchardet iconv
 everything: deps-core ruby

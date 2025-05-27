@@ -76,15 +76,6 @@ if disable_openal == false
     endif
 
     global_args += '-DMKXPZ_ALCDEVICE=' + alcdev_struct
-
-    if get_option('shared_fluid') == true
-        fluidsynth = dependency('fluidsynth', static: build_static)
-        add_project_arguments('-DSHARED_FLUID', language: 'cpp')
-        global_dependencies += fluidsynth
-        if host_system == 'windows'
-            global_dependencies += compilers['cpp'].find_library('dsound')
-        endif
-    endif
 endif
 
 
@@ -187,8 +178,6 @@ audio_source = files(
     'audio/audio.cpp',
     'audio/audiostream.cpp',
     'audio/audiochannels.cpp',
-    'audio/fluid-fun.cpp',
-    'audio/midisource.cpp',
     'audio/sdlsoundsource.cpp',
     'audio/soundemitter.cpp',
     'audio/vorbissource.cpp',

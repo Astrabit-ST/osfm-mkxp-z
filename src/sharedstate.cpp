@@ -38,9 +38,6 @@
 #include "quad.h"
 #include "binding.h"
 #include "exception.h"
-#ifndef MKXPZ_NO_OPENAL
-#include "sharedmidistate.h"
-#endif
 
 #include "oneshot.h"
 
@@ -77,10 +74,6 @@ struct SharedStatePrivate
 	EventThread &eThread;
 	RGSSThreadData &rtData;
 	Config &config;
-
-#ifndef MKXPZ_NO_OPENAL
-	SharedMidiState midiState;
-#endif
 
 	Graphics graphics;
 	Input input;
@@ -120,9 +113,6 @@ struct SharedStatePrivate
 	      eThread(*threadData->ethread),
 	      rtData(*threadData),
 	      config(threadData->config),
-#ifndef MKXPZ_NO_OPENAL
-	      midiState(threadData->config),
-#endif
 	      graphics(threadData),
 	      input(*threadData),
 				#ifndef MKXPZ_NO_OPENAL
@@ -180,13 +170,6 @@ struct SharedStatePrivate
 		/* Reuse starting values */
 		TEXFBO::allocEmpty(gpTexFBO, globalTexW, globalTexH);
 		TEXFBO::linkFBO(gpTexFBO);
-
-		/* RGSS3 games will call setup_midi, so there's
-		 * no need to do it on startup */
-		#ifndef MKXPZ_NO_OPENAL
-		if (rgssVer <= 2)
-			midiState.initIfNeeded(threadData->config);
-		#endif
 	}
 
 	~SharedStatePrivate()
@@ -267,9 +250,6 @@ GSATT(ShaderSet&, shaders)
 GSATT(TexPool&, texPool)
 GSATT(Quad&, gpQuad)
 GSATT(SharedFontState&, fontState)
-#ifndef MKXPZ_NO_OPENAL
-GSATT(SharedMidiState&, midiState)
-#endif
 
 void SharedState::setBindingData(void *data)
 {

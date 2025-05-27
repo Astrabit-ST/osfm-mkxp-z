@@ -1,11 +1,10 @@
-option('mri_version', type: 'string', value: '3.1', description: 'Version of MRI to link with')
+option('mri_version', type: 'string', value: '3.4', description: 'Version of MRI to link with')
 option('mri_includes', type: 'string', value: '', description: 'Ruby manual include path')
 option('mri_libpath', type: 'string', value: '', description: 'Ruby manual lib path')
 option('mri_library', type: 'string', value: '', description: 'Ruby manual link name')
 option('force32', type: 'boolean', value: false, description: 'Force compiler to build a 32-bit executable')
 
 option('cxx11_experimental', type: 'boolean', value: false, description: 'Toggles between using ghc/filesystem or C++11 <experimental/filesystem>')
-option('shared_fluid', type: 'boolean', value: true, description: 'Dynamically link fluidsynth at build time')
 option('cjk_fallback_font', type: 'boolean', value: false, description: 'Use WenQuanYi Micro Hei as the fallback font')
 option('use_miniffi', type: 'boolean', value: false, description: 'Enable MiniFFI Ruby module (Win32API)')
 option('enable-https', type: 'boolean', value: false, description: 'Support HTTPS for get/post requests. Requires OpenSSL.')

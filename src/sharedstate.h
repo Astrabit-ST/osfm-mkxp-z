@@ -53,9 +53,6 @@ class SharedFontState;
 struct GlobalIBO;
 struct Config;
 struct Vec2i;
-#ifndef MKXPZ_NO_OPENAL
-struct SharedMidiState;
-#endif
 
 class Oneshot;
 
@@ -93,9 +90,6 @@ struct SharedState
 
 	SharedFontState &fontState() const;
 	Font &defaultFont() const;
-#ifndef MKXPZ_NO_OPENAL
-	SharedMidiState &midiState() const;
-#endif
 
 	sigslot::signal<> prepareDraw;
 	std::set<MonitorWindow *> monitorWindows;

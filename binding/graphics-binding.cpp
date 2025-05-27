@@ -21,7 +21,6 @@
 
 #include "config.h"
 #include "graphics.h"
-#include "ruby/internal/special_consts.h"
 #include "sharedstate.h"
 #include "binding-util.h"
 #include "binding-types.h"
