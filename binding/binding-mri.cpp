@@ -102,10 +102,6 @@ void fileIntBindingInit();
 void MiniFFIBindingInit();
 #endif
 
-#ifdef MKXPZ_STEAM
-void CUSLBindingInit();
-#endif
-
 void httpBindingInit();
 
 void oneshotBindingInit();
@@ -204,10 +200,6 @@ static void mriBindingInit() {
 
 #ifdef MKXPZ_MINIFFI
   MiniFFIBindingInit();
-#endif
-
-#ifdef MKXPZ_STEAM
-  CUSLBindingInit();
 #endif
 
   httpBindingInit();

@@ -66,10 +66,6 @@ __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 }
 #endif
 
-#ifdef MKXPZ_STEAM
-#include "steamshim_child.h"
-#endif
-
 #ifdef MKXPZ_BUILD_XCODE
 #include "TouchBar.h"
 #include <Availability.h>
@@ -265,15 +261,6 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
-#ifdef MKXPZ_STEAM
-  if (!STEAMSHIM_init()) {
-    showInitError("Failed to initialize Steamworks. The application cannot "
-                  "continue launching.");
-    SDL_Quit();
-    return 0;
-  }
-#endif
-
   if (conf.windowTitle.empty())
     conf.windowTitle = conf.game.title;
 
@@ -284,10 +271,6 @@ int main(int argc, char *argv[]) {
     showInitError(std::string("Error initializing SDL_ttf: ") + SDL_GetError());
     SDL_Quit();
 
-#ifdef MKXPZ_STEAM
-    STEAMSHIM_deinit();
-#endif
-
     return 0;
   }
 
@@ -297,10 +280,6 @@ int main(int argc, char *argv[]) {
                   Sound_GetError());
     TTF_Quit();
     SDL_Quit();
-
-#ifdef MKXPZ_STEAM
-    STEAMSHIM_deinit();
-#endif
 
     return 0;
   }
@@ -352,9 +331,6 @@ int main(int argc, char *argv[]) {
   if (!win) {
     showInitError(std::string("Error creating window: ") + SDL_GetError());
 
-#ifdef MKXPZ_STEAM
-    STEAMSHIM_deinit();
-#endif
     return 0;
   }
 
@@ -369,9 +345,6 @@ int main(int argc, char *argv[]) {
                     "Please move the application to the Applications folder "
                     "(or anywhere else) " +
                     "and try again.");
-#ifdef MKXPZ_STEAM
-      STEAMSHIM_deinit();
-#endif
       return 0;
     }
   }
@@ -412,9 +385,6 @@ int main(int argc, char *argv[]) {
     TTF_Quit();
     SDL_Quit();
 
-#ifdef MKXPZ_STEAM
-    STEAMSHIM_deinit();
-#endif
     return 0;
   }
 #endif
@@ -513,9 +483,6 @@ int main(int argc, char *argv[]) {
     WSACleanup();
 #endif
 
-#ifdef MKXPZ_STEAM
-  STEAMSHIM_deinit();
-#endif
 #ifndef MKXPZ_NO_OPENAL
   Sound_Quit();
 #endif

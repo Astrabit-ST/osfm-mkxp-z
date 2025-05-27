@@ -37,38 +37,6 @@ endif
 # Ext libs
 # ====================
 
-# STEAMWORKS
-
-steamworks = false
-steamworks_path = get_option('steamworks_path')
-if steamworks_path != ''
-    libname = 'steam_api'
-    if host_system == 'linux'
-        if sizeof['void*'] == 4
-            bindir = 'linux32'
-        else
-            bindir = 'linux64'
-        endif
-    else
-        if win64 == true
-            bindir = 'win64'
-            libname += '64'
-        else
-            bindir = ''
-        endif
-    endif
-
-    steam_libpath = steamworks_path + '/redistributable_bin/' + bindir
-    steamlib = compilers['cpp'].find_library(libname, required: false, dirs: [steam_libpath])
-
-    if steamlib.found() == true
-        global_include_dirs += include_directories('steamshim')
-        global_args += '-DMKXPZ_STEAM'
-        global_sources += 'steamshim/steamshim_child.c'
-        steamworks = true
-    endif
-endif
-
 # GLES
 gfx_backend = get_option('gfx_backend')
 if gfx_backend == 'gles'
@@ -150,43 +118,6 @@ else
 endif
 
 exe_name = 'oneshot'
-
-if steamworks == true
-    la = ''
-    if build_static == true
-        if host_system == 'windows'
-            la = '-static'
-        else
-            la = '-static-libgcc -static-libstdc++'
-        endif
-    endif
-
-    shim_args = [
-        '-DGAME_LAUNCH_NAME="lib/' + exe_name + '"',
-        '-I' + steamworks_path + '/public'
-        ]
-
-    if get_option('steam_appid') != ''
-        shim_args += '-DSTEAM_APPID=' + get_option('steam_appid')
-    endif
-
-    if get_option('steamshim_debug') == true
-        shim_args += '-DSTEAMSHIM_DEBUG'
-        shim_ws = 'console'
-    else
-        shim_ws = 'windows'
-    endif
-
-    executable('steamshim',
-        sources: files('steamshim/steamshim_parent.cpp'),
-        dependencies: steamlib,
-        cpp_args: shim_args,
-        link_args: la.split(),
-        win_subsystem: shim_ws,
-        install: (host_system != 'windows'),
-        build_rpath: '$ORIGIN'
-    )
-endif
 
 executable(exe_name,
     sources: global_sources,

@@ -1,7 +1,4 @@
 swarg = ''
-if steamworks == true
-  swarg = steam_libpath
-endif
 
 if get_option('appimage') == true
   install_data('AppRun')

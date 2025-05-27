@@ -16,29 +16,11 @@
 // along with osfm-mkxp-z.  If not, see <https://www.gnu.org/licenses/>.
 #include "binding-util.h"
 
-#ifdef MKXPZ_STEAM
-#include "steamshim_child.h"
-
-#define STEAMSHIM_GETV_EXP(t, exp)                                             \
-  while (STEAMSHIM_alive()) {                                                  \
-    const STEAMSHIM_Event *e = STEAMSHIM_pump();                               \
-    if (e && e->type == t) {                                                   \
-      exp;                                                                     \
-      break;                                                                   \
-    }                                                                          \
-  }
-
-#endif
-
 RB_METHOD(steamEnabled)
 {
 	RB_UNUSED_PARAM;
 
-#ifdef MKXPZ_STEAM
-	return Qtrue;
-#else
 	return Qfalse;
-#endif
 }
 
 RB_METHOD(steamUnlock)
@@ -48,9 +30,6 @@ RB_METHOD(steamUnlock)
   const char *name;
 	rb_get_args(argc, argv, "z", &name RB_ARG_END);
 
-#ifdef MKXPZ_STEAM
-  STEAMSHIM_setAchievement(name, true);
-#endif
 	return Qnil;
 }
 
@@ -61,9 +40,6 @@ RB_METHOD(steamLock)
 	const char *name;
 	rb_get_args(argc, argv, "z", &name RB_ARG_END);
 
-#ifdef MKXPZ_STEAM
-  STEAMSHIM_setAchievement(name, false);
-#endif
 	return Qnil;
 }
 
@@ -74,16 +50,7 @@ RB_METHOD(steamUnlocked)
 	const char *name;
 	rb_get_args(argc, argv, "z", &name RB_ARG_END);
 
-#ifdef MKXPZ_STEAM
-  bool achieved;
-  STEAMSHIM_getAchievement(name);
-  STEAMSHIM_GETV_EXP(SHIMEVENT_GETACHIEVEMENT, {
-    achieved = e->ivalue;
-  });
-  return achieved ? Qtrue : Qfalse;
-#else
 	return Qfalse;
-#endif
 }
 
 void oneshotSteamBindingInit() {
@@ -97,7 +64,7 @@ void oneshotSteamBindingInit() {
 
 	/* Functions */
 	_rb_define_module_function(module, "enabled?", steamEnabled);
-    _rb_define_module_function(module, "unlock", steamUnlock);
+	_rb_define_module_function(module, "unlock", steamUnlock);
 	_rb_define_module_function(module, "lock", steamLock);
 	_rb_define_module_function(module, "unlocked?", steamUnlocked);
 }

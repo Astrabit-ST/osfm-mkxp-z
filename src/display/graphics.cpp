@@ -55,9 +55,6 @@
 #include <SDL3/SDL_video.h>
 #include <SDL3_image/SDL_image.h>
 
-#ifdef MKXPZ_STEAM
-#include "steamshim_child.h"
-#endif
 
 #include <algorithm>
 #include <climits>
@@ -1345,11 +1342,6 @@ void Graphics::update(bool checkForShutdown) {
     p->checkShutDownReset();
 
   p->checkSyncLock();
-
-#ifdef MKXPZ_STEAM
-  if (STEAMSHIM_alive())
-    STEAMSHIM_pump();
-#endif
 
   if (p->frozen)
     return;

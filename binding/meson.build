@@ -53,10 +53,6 @@ if disable_openal == false
     binding_source += audio_binding_source
 endif
 
-if steamworks == true
-    binding_source += files('cusl-binding.cpp')
-endif
-
 if miniffi == true
     binding_source += files('miniffi-binding.cpp')
     binding_source += files('miniffi.cpp')
