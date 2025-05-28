@@ -67,7 +67,7 @@ jobs:
           mkdir build/out/lib
           cd build/out/
           cp /ucrt64/bin/zlib1.dll ./lib
-          cp ../../windows/build-ucrt64/bin/x64-ucrt-ruby310.dll .
+          cp ../../windows/build-ucrt64/bin/x64-ucrt-ruby340.dll .
           cp -r ../../windows/build-ucrt64/lib/ruby/3.4.0 .
           mv ./3.4.0 ./lib/ruby
           cp ../oneshot.exe ./lib
