@@ -23,14 +23,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     wchar_t *pathend = wcsrchr(oneshotDir, L'\\');
 
     if (pathend != NULL) {
-      *pathend = L'\0';
+      *pathend = '\0';
     }
     if (_wchdir(oneshotDir)) {
-      MessageBoxW(NULL,
-                  L"Changing working directory failed. This should never "
-                  L"happen.\nFind Melody and beat her with a stick.",
-                  L"ModShot Shim", MB_ICONERROR);
-      printf("chdir errno: %d", errno);
+      char msg[512];
+      snprintf(msg, 512, "Changing working directory failed. This should never happen.\nFind Melody and beat her with a stick.\nError code: %s", strerror(errno));
+      MessageBox(NULL, msg, "ModShot Shim", MB_ICONERROR);
     }
   }
 
@@ -38,12 +36,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     argv[0] = ARGV0;
   }
 
-  _wexecv(GAME_LAUNCH_NAME, (const wchar_t *const *)argv);
+  _wexecv(L"lib\\oneshot.exe", (const wchar_t *const *)argv);
 
-  MessageBoxW(NULL,
-              L"Cannot start ModShot for some reason.\nPlease check your "
-              L"ModShot installation.",
-              L"ModShot Shim", MB_ICONERROR);
+  char msg[512];
+  snprintf(msg, 512, "Cannot start ModShot for some reason.\nPlease check your ModShot installation.\nError code: %s", strerror(errno));
+
+  MessageBox(NULL, msg, "ModShot Shim", MB_ICONERROR);
 
   return 1;
 }
