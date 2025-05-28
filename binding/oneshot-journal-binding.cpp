@@ -36,14 +36,25 @@ int server_thread_fn(void *data) {
   unsigned int priority;
   size_t recvd_size;
 
-  // clear the queue by reading all the messages
-  while (journal_mq->try_receive(&message, sizeof(message), recvd_size,
-                                 priority)) {
-    Debug() << "WARN:" << "Leftover message" << message.tag;
-  }
+  try {
+    // clear the queue by reading all the messages
+    while (journal_mq->try_receive(&message, sizeof(message), recvd_size,
+                                   priority)) {
+      Debug() << "WARN:" << "Leftover message" << message.tag;
+    }
 
-  message.tag = Message::Hello;
-  oneshot_mq->send(&message, sizeof(message), 255);
+    message.tag = Message::Hello;
+    oneshot_mq->send(&message, sizeof(message), 255);
+  } catch (...) {
+    Debug() << "failed to recv/send to queue";
+    message_queue::remove("oneshot_mq");
+    message_queue::remove("journal_mq");
+
+    oneshot_mq =
+        new message_queue(open_or_create, "oneshot_mq", 100, sizeof(Message));
+    journal_mq =
+        new message_queue(open_or_create, "journal_mq", 100, sizeof(Message));
+  }
 
   // set active if any journals responded with hello
   for (;;) {
@@ -187,10 +198,21 @@ void cleanup_journal_stuff() {
 void oneshotJournalBindingInit() {
   mutex = SDL_CreateMutex();
 
-  oneshot_mq =
-      new message_queue(open_or_create, "oneshot_mq", 100, sizeof(Message));
-  journal_mq =
-      new message_queue(open_or_create, "journal_mq", 100, sizeof(Message));
+  try {
+    oneshot_mq =
+        new message_queue(open_or_create, "oneshot_mq", 100, sizeof(Message));
+    journal_mq =
+        new message_queue(open_or_create, "journal_mq", 100, sizeof(Message));
+  } catch (...) {
+    Debug() << "failed to open queue";
+    message_queue::remove("oneshot_mq");
+    message_queue::remove("journal_mq");
+
+    oneshot_mq =
+        new message_queue(open_or_create, "oneshot_mq", 100, sizeof(Message));
+    journal_mq =
+        new message_queue(open_or_create, "journal_mq", 100, sizeof(Message));
+  }
 
   thread = SDL_CreateThread(server_thread_fn, "journal server thread", NULL);
 
