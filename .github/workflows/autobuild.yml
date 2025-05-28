@@ -68,8 +68,8 @@ jobs:
           cd build/out/
           cp /ucrt64/bin/zlib1.dll ./lib
           cp ../../windows/build-ucrt64/bin/x64-ucrt-ruby310.dll .
-          cp -r ../../windows/build-ucrt64/lib/ruby/3.1.0 .
-          mv ./3.1.0 ./lib/ruby
+          cp -r ../../windows/build-ucrt64/lib/ruby/3.4.0 .
+          mv ./3.4.0 ./lib/ruby
           cp ../oneshot.exe ./lib
           cp ../oneshot-shim.exe ./oneshot.exe
           cp ../journal/_______.exe .
@@ -122,8 +122,8 @@ jobs:
       - name: Prepare archive
         run: |
           cd build/lib
-          cp -r ../../linux/build-x86_64/lib/ruby/3.1.0 .
-          mv ./3.1.0 ./ruby
+          cp -r ../../linux/build-x86_64/lib/ruby/3.4.0 .
+          mv ./3.4.0 ./ruby
           cp ../../mkxp.json .
           cp -r ../../scripts .
           cp ../../assets/LICENSE.mkxp-z-with-https.txt .
