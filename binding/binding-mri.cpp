@@ -107,6 +107,7 @@ void httpBindingInit();
 void oneshotBindingInit();
 void oneshotSteamBindingInit();
 void oneshotJournalBindingInit();
+void cleanup_journal_stuff();
 void oneshotNikoBindingInit();
 void oneshotWallpaperBindingInit();
 #ifdef __linux__
@@ -1308,6 +1309,7 @@ static void mriBindingExecute() {
   if (!NIL_P(exc) && !rb_obj_is_kind_of(exc, rb_eSystemExit))
     showExc(exc, btData);
 
+  cleanup_journal_stuff();
   ruby_cleanup(0);
 
   // Force allow exit

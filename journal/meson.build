@@ -25,7 +25,14 @@ foreach file : embedded_assets_f
     count += 1
 endforeach
 
-sources += ['journal.cpp', 'journal_handling.cpp', 'niko_handling.cpp']
+sources += [
+    'journal.cpp',
+    'niko_handling.cpp',
+    'journal_handling.cpp',
+    'renderer.cpp',
+    'mq_state_machine.cpp',
+    'mq_wrapper.cpp'
+]
 includes = [include_directories('stb', 'common')]
 
 if host_system == 'linux'

@@ -1,5 +1,6 @@
 // ruby provides its own gettimeofday() in ruby/win32.h, so we have to disable
 // that file somehow. Thanks ruby!
+#include "SDL3/SDL_mutex.h"
 #define RBIMPL_INTERN_SELECT_H 1
 #define RUBY_WIN32_H 1
 #include "binding-util.h"
@@ -193,10 +194,20 @@ void cleanup_journal_stuff() {
 
   delete oneshot_mq;
   delete journal_mq;
+  
+  // Needed?
+  // SDL_UnlockMutex(mutex);
+  // SDL_DestroyMutex(mutex);
+  message_queue::remove("oneshot_mq");
+  message_queue::remove("journal_mq");
 }
 
 void oneshotJournalBindingInit() {
   mutex = SDL_CreateMutex();
+
+  // Remove queues on startup in case they've been corrupt
+  message_queue::remove("oneshot_mq");
+  message_queue::remove("journal_mq");
 
   try {
     oneshot_mq =
