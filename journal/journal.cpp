@@ -1,13 +1,8 @@
-
-
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-
-#include <cassert>
-#include <cstdio>
-#include <cstdlib>
-
 #include <SDL3/SDL.h>
+#include <cassert>
+#include <cstdlib>
 
 void journal_handling(int argc, char **argv);
 void niko_handling(int x, int y);
