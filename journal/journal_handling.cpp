@@ -1,13 +1,21 @@
+#include "journal_common.h"
+#include <cstddef>
 #define SDL_MAIN_HANDLED 1 // we are handling this ourselves
 
 #include "SDL_custom_events.h"
-#include "mq_state_machine.h"
 #include "renderer.h"
 #include <SDL3/SDL_main.h>
 #include <boost/interprocess/ipc/message_queue.hpp>
 #include <iostream>
 
 using namespace boost::interprocess;
+
+int consumer_loop(void *userdata);
+void consumer_stop();
+
+int producer_loop(void *userdata);
+void producer_stop();
+void produce_message(Message message);
 
 enum UserEvent {
   ChangeImage,
@@ -16,9 +24,6 @@ enum UserEvent {
 
 struct State {
   Renderer *renderer;
-
-  MqConsumerStateMachine *o2j;
-  MqProducerStateMachine *j2o;
 
   SDL_Thread *consumer_thread;
   SDL_Thread *producer_thread;
@@ -30,11 +35,8 @@ struct State {
       exit(-1);
     }
 
-    o2j = new MqConsumerStateMachine();
-    j2o = new MqProducerStateMachine();
-
-    consumer_thread = SDL_CreateThread(consumer_fn, "consumer_thread", o2j);
-    producer_thread = SDL_CreateThread(producer_fn, "producer_thread", j2o);
+    consumer_thread = SDL_CreateThread(consumer_loop, "consumer_thread", NULL);
+    producer_thread = SDL_CreateThread(producer_loop, "producer_thread", NULL);
   }
 
   SDL_AppResult iterate() {
@@ -46,7 +48,14 @@ struct State {
     if (event->type == JOURNAL_CLOSE)
       return stop();
 
-    if (event->type == JOURNAL_CHANGE_IMAGE) {
+    if (event->type == ONESHOT_LAUNCHED) {
+      return SDL_APP_CONTINUE;
+    }
+
+    if (event->type == JOURNAL_SET_IMAGE) {
+      char *filename = (char *)event->user.data1;
+      renderer->set_image(filename);
+      free(filename);
       return SDL_APP_CONTINUE;
     }
 
@@ -62,27 +71,12 @@ struct State {
   };
 
   SDL_AppResult stop() {
-    o2j->stop();
-    j2o->stop();
+    consumer_stop();
+    producer_stop();
     return SDL_APP_SUCCESS;
   }
 
-  static int consumer_fn(void *userdata) {
-    MqConsumerStateMachine *mq = (MqConsumerStateMachine *)userdata;
-    mq->run();
-    return 0;
-  }
-
-  static int producer_fn(void *userdata) {
-    MqProducerStateMachine *mq = (MqProducerStateMachine *)userdata;
-    mq->run();
-    return 0;
-  }
-
-  ~State() {
-    SDL_WaitThread(consumer_thread, NULL);
-    SDL_WaitThread(producer_thread, NULL);
-  }
+  ~State() { SDL_WaitThread(consumer_thread, NULL); }
 };
 
 void journal_handling(int argc, char **argv) {

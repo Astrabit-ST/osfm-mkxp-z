@@ -62,7 +62,9 @@ SDL_AppResult Renderer::init() {
       SDL_CreateSurfaceFrom(w, h, SDL_PIXELFORMAT_ABGR8888, pixels, w * 4);
 
   window =
-      SDL_CreateWindow(" ", w, h, SDL_WINDOW_TRANSPARENT | SDL_WINDOW_HIDDEN);
+      SDL_CreateWindow(" ", w, h,
+                       SDL_WINDOW_TRANSPARENT | SDL_WINDOW_HIDDEN |
+                           SDL_WINDOW_ALWAYS_ON_TOP | SDL_WINDOW_BORDERLESS);
   renderer = SDL_CreateRenderer(window, NULL);
   texture = SDL_CreateTextureFromSurface(renderer, surface);
 
@@ -113,6 +115,7 @@ void Renderer::set_image(char *filename) {
   texture = SDL_CreateTextureFromSurface(renderer, surface);
 
   SDL_SetWindowSize(window, w, h);
+  SDL_SetWindowShape(window, surface);
 }
 
 void Renderer::move_window_to(int x, int y) {

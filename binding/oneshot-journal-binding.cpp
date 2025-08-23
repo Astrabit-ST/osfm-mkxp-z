@@ -97,8 +97,8 @@ RB_METHOD(journalSet) {
   rb_get_args(argc, argv, "z", &name RB_ARG_END);
 
   // if the journal is not active, return
-  if (active_count == 0)
-    return Qnil;
+  // if (active_count == 0)
+  //   return Qnil;
 
   Message message;
 
