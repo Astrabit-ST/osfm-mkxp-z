@@ -22,7 +22,7 @@ bool try_produce() {
 
   bool success = producer_mq.write(*queued_message);
   if (success)
-    free(queued_message);
+    queued_message = NULL;
 
   return success;
 }

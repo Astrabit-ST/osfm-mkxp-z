@@ -37,6 +37,8 @@ struct State {
 
     consumer_thread = SDL_CreateThread(consumer_loop, "consumer_thread", NULL);
     producer_thread = SDL_CreateThread(producer_loop, "producer_thread", NULL);
+
+    produce_message(Message{.tag = Message::Hello});
   }
 
   SDL_AppResult iterate() {
@@ -64,6 +66,9 @@ struct State {
     case SDL_EVENT_QUIT:
       return stop();
     case SDL_EVENT_WINDOW_MOVED:
+      Message message = {.tag = Message::WindowPosition,
+                         .val = {{event->window.data1, event->window.data2}}};
+      produce_message(message);
       return SDL_APP_CONTINUE;
     }
 
@@ -71,6 +76,8 @@ struct State {
   };
 
   SDL_AppResult stop() {
+    // Terminate renderer
+    produce_message(Message{.tag = Message::Goodbye});
     consumer_stop();
     producer_stop();
     return SDL_APP_SUCCESS;
