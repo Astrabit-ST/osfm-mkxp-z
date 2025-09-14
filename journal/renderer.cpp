@@ -17,6 +17,9 @@ std::string fake_save_path() {
   return path;
 }
 
+// TODO: Apply shape, be borderless, and always on top only when image loaded
+// TODO: Escape key to close window
+
 SDL_AppResult Renderer::init() {
   if (initialized)
     throw std::runtime_error("Renderer already initialized.");
@@ -61,10 +64,10 @@ SDL_AppResult Renderer::init() {
   surface =
       SDL_CreateSurfaceFrom(w, h, SDL_PIXELFORMAT_ABGR8888, pixels, w * 4);
 
+  // Set only when display image: SDL_WINDOW_ALWAYS_ON_TOP | SDL_WINDOW_BORDERLESS
+  // Unset when image cleared
   window =
-      SDL_CreateWindow(" ", w, h,
-                       SDL_WINDOW_TRANSPARENT | SDL_WINDOW_HIDDEN |
-                           SDL_WINDOW_ALWAYS_ON_TOP | SDL_WINDOW_BORDERLESS);
+      SDL_CreateWindow(" ", w, h, SDL_WINDOW_TRANSPARENT | SDL_WINDOW_HIDDEN);
   renderer = SDL_CreateRenderer(window, NULL);
   texture = SDL_CreateTextureFromSurface(renderer, surface);
 

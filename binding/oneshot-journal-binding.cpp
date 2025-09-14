@@ -1,23 +1,28 @@
 // ruby provides its own gettimeofday() in ruby/win32.h, so we have to disable
 // that file somehow. Thanks ruby!
-#include "SDL3/SDL_mutex.h"
+#include <boost/interprocess/ipc/message_queue.hpp>
+#include <chrono>
+#include <iostream>
+#include <ostream>
 #define RBIMPL_INTERN_SELECT_H 1
 #define RUBY_WIN32_H 1
 #include "binding-util.h"
 #include "debugwriter.h"
 #include "i18n.h"
-
 #include "journal_common.h"
-
 #include <SDL3/SDL.h>
 #include <cstring>
 #include <filesystem>
 #include <string>
 #include <unistd.h>
+#include <iostream>
+#include <chrono>
+#include <iomanip>
 
-#include <boost/interprocess/ipc/message_queue.hpp>
-
+using namespace std::chrono;   
 using namespace boost::interprocess;
+
+#define MQ_TIMEOUT std::chrono::milliseconds(8)
 
 static SDL_Thread *thread = NULL;
 static SDL_Mutex *mutex = NULL;
@@ -45,7 +50,9 @@ int server_thread_fn(void *data) {
     }
 
     message.tag = Message::Hello;
-    oneshot_mq->send(&message, sizeof(message), 255);
+    
+    auto deadline = std::chrono::steady_clock::now() + MQ_TIMEOUT;
+    bool success = oneshot_mq->timed_send(&message, sizeof(message), 255, deadline);
   } catch (...) {
     Debug() << "failed to recv/send to queue";
     message_queue::remove("oneshot_mq");
@@ -106,7 +113,8 @@ RB_METHOD(journalSet) {
   // journal
   if (strlen(name) == 0) {
     message.tag = Message::Close;
-    oneshot_mq->send(&message, sizeof(message), 255);
+    auto deadline = std::chrono::steady_clock::now() + MQ_TIMEOUT;
+    bool success = oneshot_mq->timed_send(&message, sizeof(message), 255, deadline);
 
     active_count--;
 
@@ -120,6 +128,8 @@ RB_METHOD(journalSet) {
   dir += name;
   dir += ".png";
 
+  bool success = false;
+
   // we have to chunk the image path
   message.tag = Message::ImagePath;
   // for i in ceil(dir.length() / 24)
@@ -130,12 +140,50 @@ RB_METHOD(journalSet) {
     message.val.text.len = substr.length();
     strncpy(message.val.text.chars, substr.c_str(), substr.length());
 
-    oneshot_mq->send(&message, sizeof(message), 255);
+    auto deadline = std::chrono::steady_clock::now() + MQ_TIMEOUT;
+    
+
+    Debug() << "Sending: Message::ImagePath" << i;
+
+    auto ms = duration_cast<milliseconds>(deadline.time_since_epoch());
+
+    auto minutes = duration_cast<std::chrono::minutes>(ms);
+    ms -= minutes;
+
+    auto seconds = duration_cast<std::chrono::seconds>(ms);
+    ms -= seconds;
+
+    std::cout << "Deadline: "
+              << std::setfill('0')
+              << std::setw(2) << minutes.count() << ':'
+              << std::setw(2) << seconds.count() << '.'
+              << std::setw(3) << ms.count()
+              << std::endl;
+
+    success = oneshot_mq->timed_send(&message, sizeof(message), 255, deadline);
+    Debug() << "Sent: Message::ImagePath" << i << success;
+    if (!success)
+      break;
   }
 
   // tell the journal we are finished sending the image path
-  message.tag = Message::FinishImagePath;
-  oneshot_mq->send(&message, sizeof(message), 255);
+  if (success) {
+    message.tag = Message::FinishImagePath;
+    auto deadline = std::chrono::steady_clock::now() + MQ_TIMEOUT;
+    success = oneshot_mq->timed_send(&message, sizeof(message), 255, deadline);
+    Debug() << "Message::FinishImagePath" << success;
+  }
+
+  // Recreate the message queues if we failed to send any message, then resend
+  // the message
+  if (!success) {
+    Debug() << "Recreatings MQs...";
+    oneshot_mq =
+        new message_queue(open_or_create, "oneshot_mq", 100, sizeof(Message));
+    journal_mq =
+        new message_queue(open_or_create, "journal_mq", 100, sizeof(Message));
+    Debug() << "Recreated MQs.";
+  }
 
   return Qnil;
 }
@@ -171,7 +219,9 @@ RB_METHOD(setJournalPosition) {
   Message message;
   message.tag = Message::SetWindowPosition;
   message.val.pos = {x, y};
-  oneshot_mq->send(&message, sizeof(message), 255);
+  
+  auto deadline = std::chrono::steady_clock::now() + MQ_TIMEOUT;
+  bool success = oneshot_mq->timed_send(&message, sizeof(message), 255, deadline);
 
   return Qnil;
 }
@@ -179,7 +229,9 @@ RB_METHOD(setJournalPosition) {
 RB_METHOD(journalQuit) {
   Message message;
   message.tag = Message::Close;
-  oneshot_mq->send(&message, sizeof(message), 255);
+  
+  auto deadline = std::chrono::steady_clock::now() + MQ_TIMEOUT;
+  bool success = oneshot_mq->timed_send(&message, sizeof(message), 255, deadline);
 
   active_count--;
 
@@ -194,7 +246,7 @@ void cleanup_journal_stuff() {
 
   delete oneshot_mq;
   delete journal_mq;
-  
+
   // Needed?
   // SDL_UnlockMutex(mutex);
   // SDL_DestroyMutex(mutex);
@@ -216,6 +268,9 @@ void oneshotJournalBindingInit() {
         new message_queue(open_or_create, "journal_mq", 100, sizeof(Message));
   } catch (...) {
     Debug() << "failed to open queue";
+
+    // TODO: This entire block is redundant
+    // Need handling/indication something's wrong
     message_queue::remove("oneshot_mq");
     message_queue::remove("journal_mq");
 
