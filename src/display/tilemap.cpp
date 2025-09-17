@@ -53,9 +53,11 @@ extern const StaticRect autotileRects[];
 
 typedef std::vector<SVertex> SVVector;
 
-static const int tilesetW  = 8 * 32;
-static const int autotileW = 3 * 32;
-static const int autotileH = 4 * 32;
+#define TILE_SIZE 32
+
+static const int tilesetW  = 8 * TILE_SIZE;
+static const int autotileW = 3 * TILE_SIZE;
+static const int autotileH = 4 * TILE_SIZE;
 
 static const int autotileCount = 7;
 
@@ -245,6 +247,7 @@ struct TilemapPrivate
 	bool visible;
 	bool wrapping;
 	Vec2i origin;
+	Vec2 zoom;
 
 	Vec2i dispPos;
 
@@ -357,8 +360,8 @@ struct TilemapPrivate
 	      mapViewportDirty(false),
 	      zOrderDirty(false),
 	      tilemapReady(false),
-				wrapping(false),
-
+          wrapping(false),
+          zoom(1,1),
 		  opacity(255),
 	      blendType(BlendNormal),
 	      color(&tmp.color),
@@ -421,7 +424,7 @@ struct TilemapPrivate
 
 	void updateFlashMapViewport()
 	{
-		flashMap.setViewport(IntRect(viewpPos, Vec2i(viewpW, viewpH)));
+		flashMap.setViewport(IntRect(viewpPos, Vec2i(ceil(viewpW/zoom.x), ceil(viewpH/zoom.y))));
 	}
 
 	void updateAtlasInfo()
@@ -433,7 +436,7 @@ struct TilemapPrivate
 		}
 
 		int tsH = tileset->height();
-		atlas.efTilesetH = tsH - (tsH % 32);
+		atlas.efTilesetH = tsH - (tsH % TILE_SIZE);
 
 		atlas.size = TileAtlas::minSize(atlas.efTilesetH, glState.caps.maxTexSize);
 
@@ -461,10 +464,10 @@ struct TilemapPrivate
 
 			usableATs.push_back(i);
 
-			if (autotiles[i]->height() == 32)
+			if (autotiles[i]->height() == TILE_SIZE)
 			{
 				atlas.smallATs[i] = true;
-				atlas.nATFrames[i] = autotiles[i]->width()/32;
+				atlas.nATFrames[i] = autotiles[i]->width()/TILE_SIZE;
 				animatedATs.push_back(i);
 			}
 			else
@@ -588,11 +591,11 @@ struct TilemapPrivate
 				/* Animated autotile */
 				if (atlas.smallATs[atInd])
 				{
-					int frames = atW/32;
-					for (int j = 0; j < atFrames*autotileH/32; ++j)
+					int frames = atW/TILE_SIZE;
+					for (int j = 0; j < atFrames*autotileH/TILE_SIZE; ++j)
 					{
-						GLMeta::blitRectangle(IntRect(32*(j % frames), 0, 32, 32),
-						                      Vec2i(autotileW*(j % atFrames), atInd*autotileH + 32*(j / atFrames)));
+						GLMeta::blitRectangle(IntRect(TILE_SIZE*(j % frames), 0, TILE_SIZE, TILE_SIZE),
+						                      Vec2i(autotileW*(j % atFrames), atInd*autotileH + TILE_SIZE*(j / atFrames)));
 					}
 				}
 				else
@@ -713,8 +716,8 @@ struct TilemapPrivate
 			/* Iterate over the 4 tile pieces */
 			for (int i = 0; i < 4; ++i)
 			{
-				FloatRect posRect(x*32, y*32, 16, 16);
-				atSelectSubPos(posRect, i);
+				FloatRect posRect(x*TILE_SIZE*zoom.x, y*TILE_SIZE*zoom.y, 16*zoom.x, 16*zoom.y);
+				atSelectSubPos(posRect, i, zoom.x, zoom.y);
 
 				FloatRect texRect = pieceRect[i];
 
@@ -731,7 +734,7 @@ struct TilemapPrivate
 		}
 		else
 		{
-			FloatRect posRect(x*32, y*32, 32, 32);
+			FloatRect posRect(x*TILE_SIZE*zoom.x, y*TILE_SIZE*zoom.y, TILE_SIZE*zoom.x, TILE_SIZE*zoom.y);
 			FloatRect texRect(0.5f, atInd * autotileH + 0.5f, 31, 31);
 			SVertex v[4];
 			Quad::setTexPosRect(v, texRect, posRect);
@@ -794,7 +797,7 @@ struct TilemapPrivate
 
 		Vec2i texPos = TileAtlas::tileToAtlasCoor(tileX, tileY, atlas.efTilesetH, atlas.size.y);
 		FloatRect texRect((float) texPos.x+0.5f, (float) texPos.y+0.5f, 31, 31);
-		FloatRect posRect(x*32, y*32, 32, 32);
+		FloatRect posRect(x*TILE_SIZE*zoom.x, y*TILE_SIZE*zoom.y, TILE_SIZE*zoom.x, TILE_SIZE*zoom.y);
 
 		SVertex v[4];
 		Quad::setTexPosRect(v, texRect, posRect);
@@ -842,8 +845,8 @@ struct TilemapPrivate
 		// 		for (int z = 0; z < mapData->zSize(); ++z)
 		// 			handleTile(x, y, z);
 
-		for (int x = 0; x < viewpW; ++x)
-			for (int y = 0; y < viewpH; ++y)
+		for (int x = 0; x < ceil(viewpW/zoom.x); ++x)
+			for (int y = 0; y < ceil(viewpH/zoom.y); ++y)
 				for (int z = 0; z < mapData->zSize(); ++z)
 					handleTile(x, y, z);
 	}
@@ -1026,7 +1029,12 @@ struct TilemapPrivate
 	void updateMapViewport()
 	{
 		const Vec2i combOrigin = origin + elem.sceneGeo.orig;
-		const Vec2i mvpPos = getTilePos(combOrigin);
+		Vec2i mvpPos;
+
+		if (zoom.x == 1 && zoom.y == 1)
+			mvpPos = getTilePos(combOrigin);
+		else
+			mvpPos = getTilePosZoomed(combOrigin, zoom.x, zoom.y);
 
 		if (mvpPos != viewpPos)
 		{
@@ -1035,7 +1043,16 @@ struct TilemapPrivate
 			updateFlashMapViewport();
 		}
 
-		dispPos = elem.sceneGeo.rect.pos() - wrap(combOrigin, 32);
+		if (zoom.x == 1 && zoom.y == 1)
+			dispPos = elem.sceneGeo.rect.pos() - wrap(combOrigin, TILE_SIZE);
+		else
+		{
+			Vec2i rectPos = elem.sceneGeo.rect.pos();
+			dispPos = Vec2i(
+				rectPos.x - wrap(combOrigin.x, TILE_SIZE * zoom.x),
+				rectPos.y - wrap(combOrigin.y, TILE_SIZE * zoom.y)
+			);
+		}
 	}
 
 	void prepare()
@@ -1188,7 +1205,7 @@ void ZLayer::drawInt()
 
 int ZLayer::calculateZ(TilemapPrivate *p, int index)
 {
-	return 32 * (index + p->viewpPos.y + 1) - p->origin.y;
+	return TILE_SIZE * (index + p->viewpPos.y + 1) - p->origin.y;
 }
 
 void ZLayer::initUpdateZ()
@@ -1293,6 +1310,8 @@ DEF_ATTR_RD_SIMPLE(Tilemap, Priorities, Table*, p->priorities)
 DEF_ATTR_RD_SIMPLE(Tilemap, Visible, bool, p->visible)
 DEF_ATTR_RD_SIMPLE(Tilemap, OX, int, p->origin.x)
 DEF_ATTR_RD_SIMPLE(Tilemap, OY, int, p->origin.y)
+DEF_ATTR_RD_SIMPLE(Tilemap, ZoomX, float, p->zoom.x)
+DEF_ATTR_RD_SIMPLE(Tilemap, ZoomY, float, p->zoom.y)
 
 DEF_ATTR_SIMPLE(Tilemap, Wrapping, bool, p->wrapping)
 DEF_ATTR_RD_SIMPLE(Tilemap, BlendType, int, p->blendType)
@@ -1410,6 +1429,28 @@ void Tilemap::setOY(int value)
 	p->origin.y = value;
 	p->zOrderDirty = true;
 	p->mapViewportDirty = true;
+}
+
+void Tilemap::setZoomX(float value){
+	guardDisposed();
+
+	if (p->zoom.x == value)
+		return;
+	
+	p->zoom.x = value;
+	p->mapViewportDirty = true;
+	p->buffersDirty = true;
+}
+
+void Tilemap::setZoomY(float value){
+	guardDisposed();
+
+	if (p->zoom.y == value)
+		return;
+	
+	p->zoom.y = value;
+	p->mapViewportDirty = true;
+	p->buffersDirty = true;
 }
 
 void Tilemap::setBlendType(int value)
