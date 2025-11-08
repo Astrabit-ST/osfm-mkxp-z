@@ -140,6 +140,7 @@ void Config::read(int argc, char *argv[]) {
         {"bitmapSmoothScalingDown", 0},
         {"smoothScalingMipmaps", false},
         {"bicubicSharpness", 100},
+        {"winConsole", false},
 #ifdef MKXPZ_SSL
         {"xbrzScalingFactor", 1.},
 #endif
@@ -340,8 +341,8 @@ try { exp } catch (...) {}
     SE.sourceCount = clamp(SE.sourceCount, 1, 64);
     
     // Determine whether to open a console window on... Windows
-    winConsole = getEnvironmentBool("MKXPZ_WINDOWS_CONSOLE", editor.debug);
-    
+    // ...but from the MKXP config, and not like an animal
+    winConsole = opts["winConsole"];
 #ifdef __APPLE__
     // Determine whether to use the Metal renderer on macOS
     // Environment variable takes priority over the json setting
