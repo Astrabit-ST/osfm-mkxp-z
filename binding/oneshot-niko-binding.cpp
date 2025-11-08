@@ -10,6 +10,22 @@
 #include <filesystem>
 #ifdef __WIN32__
 #include <process.h>
+
+static std::wstring utf8ToWide(const char *str)
+{
+	std::wstring ret;
+	if (str && str[0] != '\0') {
+		int size = MultiByteToWideChar(CP_UTF8, 0, str, -1, 0, 0);
+		if (size > 0) {
+			wchar_t *wStr = new wchar_t[size];
+			if (MultiByteToWideChar(CP_UTF8, 0, str, -1, wStr, size) == size)
+				ret = wStr;
+			delete [] wStr;
+		}
+	}
+	return ret;
+}
+
 #else
 #include <unistd.h>
 #endif
@@ -37,8 +53,8 @@ RB_METHOD(nikoStart) {
   // there was a bunch of pipe junk that is not used at all, so that is all
   // removed
 
-  auto pwd = std::filesystem::current_path();
-  std::string dir = pwd.string();
+  std::string pwd = std::filesystem::current_path().string();
+  std::string dir = pwd;
 
 #ifdef __WIN32__
   dir += "\\_______.exe";
@@ -54,7 +70,24 @@ RB_METHOD(nikoStart) {
       const_cast<char*>(window_y.c_str())};
 
 #ifdef __WIN32__
-  spawnv(_P_DETACH, dir.c_str(), args);
+	std::wstring wPath = utf8ToWide(dir.c_str());
+	std::wstring wCwd = utf8ToWide(pwd.c_str());
+  
+	wchar_t wArgs[512] = {'\0'};
+	swprintf(wArgs, sizeof(wArgs), L"\"%ls\" %ld %ld", wPath.c_str(), x, y);
+
+	// Start process
+	STARTUPINFOW si;
+	ZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);
+
+	PROCESS_INFORMATION pi;
+	ZeroMemory(&pi, sizeof(pi));
+
+	BOOL result = CreateProcessW(wPath.c_str(), wArgs, NULL, NULL, FALSE, 0, NULL, wCwd.c_str(), &si, &pi);
+	if (!result){
+		Debug() << "Failed to start Journal! Error:" << GetLastError();
+  }
 #else
   pid_t pid = fork();
   if (pid == 0) {
