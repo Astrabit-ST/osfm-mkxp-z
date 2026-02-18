@@ -5,6 +5,10 @@
 #include <iostream>
 #include <stdexcept>
 
+#ifdef __linux__
+#include "xdg-user-dir-lookup.h"
+#endif
+
 std::string fake_save_path() {
 #ifdef __linux__
   std::string path = xdg_user_dir_lookup("DOCUMENTS");
