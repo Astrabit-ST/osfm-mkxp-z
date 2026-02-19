@@ -28,6 +28,8 @@ global_args += '-DMKXPZ_VERSION="@0@"'.format(meson.project_version())
 global_args += '-DMKXPZ_GIT_HASH="@0@"'.format(git_hash)
 global_args += '-DHAVE_NANOSLEEP'
 
+global_args += '-DBOOST_INTERPROCESS_FORCE_NATIVE_EMULATION'
+
 disable_openal = get_option('disable_openal')
 if disable_openal
     global_args += '-DMKXPZ_NO_OPENAL'

@@ -61,6 +61,7 @@ executable(
     '_______',
     sources: sources,
     dependencies: [sdl3, boost],
+    cpp_args: global_args,
     link_args: link_args,
     win_subsystem: 'windows',
     include_directories: includes,
