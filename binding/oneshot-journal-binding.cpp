@@ -7,42 +7,14 @@
 #include "i18n.h"
 #include "journal_common.h"
 #include <SDL3/SDL.h>
-#include <atomic>
 #include <cstring>
 #include <filesystem>
-#include <mutex>
 #include <string>
 #include <unistd.h>
-
-SDL_Thread *thread = nullptr;
 
 static boost::interprocess::shared_memory_object journal_shm;
 static boost::interprocess::mapped_region journal_region;
 static Journal *journal = nullptr;
-
-static std::mutex journal_coords_mutex;
-static int journal_x = 0;
-static int journal_y = 0;
-static std::atomic<bool> server_active(false);
-
-int server_thread_fn(void *data) {
-  JournalGuard guard(*journal, false);
-
-  uint64_t get_journal_position_nonce = journal->get_journal_position.nonce;
-
-  while (server_active) {
-    if (get_journal_position_nonce != journal->get_journal_position.nonce) {
-      get_journal_position_nonce = journal->get_journal_position.nonce;
-      std::lock_guard journal_coords_guard(journal_coords_mutex);
-      journal_x = journal->get_journal_position.x;
-      journal_y = journal->get_journal_position.y;
-    }
-
-    journal->cond.wait(guard);
-  }
-
-  return 0;
-}
 
 RB_METHOD(journalSet) {
   RB_UNUSED_PARAM;
@@ -97,14 +69,12 @@ RB_METHOD(journalActive) {
 RB_METHOD(journalPosition) {
   RB_UNUSED_PARAM;
 
-  {
-    JournalGuard guard(*journal, false);
-    if (!journal_active(guard))
-      return Qnil;
-  }
+  JournalGuard guard(*journal, false);
 
-  std::lock_guard journal_coords_guard(journal_coords_mutex);
-  return rb_ary_new_from_args(2, INT2FIX(journal_x), RB_INT2FIX(journal_y));
+  if (!journal_active(guard))
+    return Qnil;
+
+  return rb_ary_new_from_args(2, INT2FIX(journal->get_journal_position.x), RB_INT2FIX(journal->get_journal_position.y));
 }
 
 RB_METHOD(setJournalPosition) {
@@ -127,22 +97,13 @@ RB_METHOD(journalQuit) {
 }
 
 void cleanup_journal_stuff() {
-  server_active = false;
-  try {
-    journal->cond.notify_all();
-  } catch (...) {}
-  SDL_WaitThread(thread, nullptr);
-
   deinit_journal(journal_shm, journal_region, journal);
 
-  boost::interprocess::shared_memory_object::remove("osfm_journal");
+  boost::interprocess::shared_memory_object::remove(JOURNAL_SHM_NAME);
 }
 
 void oneshotJournalBindingInit() {
   init_journal(journal_shm, journal_region, journal);
-
-  server_active = true;
-  thread = SDL_CreateThread(server_thread_fn, "journal server thread", NULL);
 
   VALUE module = rb_define_module("Journal");
   _rb_define_module_function(module, "set", journalSet);

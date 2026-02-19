@@ -32,8 +32,6 @@ struct Journal {
   } close;
 
   struct {
-    // This gets incremented each time this struct is updated
-    uint64_t nonce;
     // Position of the journal window
     int x, y;
   } get_journal_position;
@@ -148,8 +146,5 @@ static inline void init_journal(boost::interprocess::shared_memory_object &journ
     journal = new(journal_region.get_address()) Journal;
   }
 }
-
-#undef JOURNAL_VERSION
-#undef JOURNAL_SHM_NAME
 
 #endif

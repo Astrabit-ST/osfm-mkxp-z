@@ -121,7 +121,6 @@ struct State {
     case SDL_EVENT_WINDOW_MOVED:
       {
         JournalGuard guard(*journal, true);
-        ++journal->get_journal_position.nonce;
         journal->get_journal_position.x = event->window.data1;
         journal->get_journal_position.y = event->window.data2;
       }
