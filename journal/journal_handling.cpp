@@ -86,6 +86,19 @@ struct State {
 
     init_journal(journal_shm, journal_region, journal);
 
+    {
+      JournalGuard guard(*journal, true);
+      int x, y, w, h;
+      if (SDL_GetWindowPosition(renderer->window, &x, &y)) {
+        journal->get_journal_position.x = x;
+        journal->get_journal_position.y = y;
+      }
+      if (SDL_GetWindowSize(renderer->window, &w, &h)) {
+        journal->get_journal_size.w = w;
+        journal->get_journal_size.h = h;
+      }
+    }
+
     consumer_stop_requested = false;
     consumer_thread = SDL_CreateThread(consumer_loop, "consumer_thread", NULL);
   }
