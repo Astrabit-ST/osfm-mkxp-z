@@ -24,6 +24,7 @@ static int consumer_loop(void *data) {
   uint64_t image_nonce = journal->image.nonce;
   uint64_t close_nonce = journal->close.nonce;
   uint64_t set_journal_position_nonce = journal->set_journal_position.nonce;
+  uint64_t set_journal_size_nonce = journal->set_journal_position.nonce;
 
   while (!consumer_stop_requested) {
     if (image_nonce != journal->image.nonce) {
@@ -49,6 +50,15 @@ static int consumer_loop(void *data) {
       SDL_zero(event);
       event.type = JOURNAL_SET_WINDOW_POSITION;
       event.user.data1 = new std::pair<int, int>(journal->set_journal_position.x, journal->set_journal_position.y);
+      SDL_PushEvent(&event);
+    }
+
+    if (set_journal_size_nonce != journal->set_journal_size.nonce) {
+      set_journal_size_nonce = journal->set_journal_size.nonce;
+      SDL_Event event;
+      SDL_zero(event);
+      event.type = JOURNAL_SET_WINDOW_SIZE;
+      event.user.data1 = new std::pair<int, int>(journal->set_journal_size.w, journal->set_journal_size.h);
       SDL_PushEvent(&event);
     }
 
@@ -114,6 +124,18 @@ struct State {
       return SDL_APP_CONTINUE;
     }
 
+    if (event->type == JOURNAL_SET_WINDOW_SIZE) {
+      std::pair<int, int> *size = (std::pair<int, int> *)event->user.data1;
+      try {
+        renderer->resize_window(size->first, size->second);
+      } catch (...) {
+        delete size;
+        throw;
+      }
+      delete size;
+      return SDL_APP_CONTINUE;
+    }
+
     switch (event->type) {
     case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
     case SDL_EVENT_QUIT:
@@ -123,6 +145,13 @@ struct State {
         JournalGuard guard(*journal, true);
         journal->get_journal_position.x = event->window.data1;
         journal->get_journal_position.y = event->window.data2;
+      }
+      return SDL_APP_CONTINUE;
+    case SDL_EVENT_WINDOW_RESIZED:
+      {
+        JournalGuard guard(*journal, true);
+        journal->get_journal_size.w = event->window.data1;
+        journal->get_journal_size.h = event->window.data2;
       }
       return SDL_APP_CONTINUE;
     }

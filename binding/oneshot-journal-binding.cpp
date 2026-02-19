@@ -77,6 +77,17 @@ RB_METHOD(journalPosition) {
   return rb_ary_new_from_args(2, INT2FIX(journal->get_journal_position.x), RB_INT2FIX(journal->get_journal_position.y));
 }
 
+RB_METHOD(journalSize) {
+  RB_UNUSED_PARAM;
+
+  JournalGuard guard(*journal, false);
+
+  if (!journal_active(guard))
+    return Qnil;
+
+  return rb_ary_new_from_args(2, INT2FIX(journal->get_journal_size.w), RB_INT2FIX(journal->get_journal_size.h));
+}
+
 RB_METHOD(setJournalPosition) {
   int x, y;
   rb_get_args(argc, argv, "ii", &x, &y);
@@ -85,6 +96,17 @@ RB_METHOD(setJournalPosition) {
   ++journal->set_journal_position.nonce;
   journal->set_journal_position.x = x;
   journal->set_journal_position.y = y;
+  return Qnil;
+}
+
+RB_METHOD(setJournalSize) {
+  int w, h;
+  rb_get_args(argc, argv, "ii", &w, &h);
+
+  JournalGuard guard(*journal, true);
+  ++journal->set_journal_size.nonce;
+  journal->set_journal_size.w = w;
+  journal->set_journal_size.h = h;
   return Qnil;
 }
 
@@ -112,5 +134,8 @@ void oneshotJournalBindingInit() {
   _rb_define_module_function(module, "journal_position", journalPosition);
   _rb_define_module_function(module, "set_journal_position",
                              setJournalPosition);
+  _rb_define_module_function(module, "journal_size", journalSize);
+  _rb_define_module_function(module, "set_journal_size",
+                             setJournalSize);
   _rb_define_module_function(module, "quit", journalQuit);
 }

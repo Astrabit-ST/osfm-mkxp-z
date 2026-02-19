@@ -142,6 +142,10 @@ void Renderer::move_window_to(int x, int y) {
   SDL_SetWindowPosition(window, x, y);
 }
 
+void Renderer::resize_window(int w, int h) {
+  SDL_SetWindowSize(window, w, h);
+}
+
 Renderer::~Renderer() {
   if (texture != nullptr) {
     SDL_DestroyTexture(texture);

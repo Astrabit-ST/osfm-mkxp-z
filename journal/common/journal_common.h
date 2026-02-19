@@ -37,11 +37,23 @@ struct Journal {
   } get_journal_position;
 
   struct {
+    // Size of the journal window
+    int w, h;
+  } get_journal_size;
+
+  struct {
     // This gets incremented each time this struct is updated
     uint64_t nonce;
     // Position of the journal window
     int x, y;
   } set_journal_position;
+
+  struct {
+    // This gets incremented each time this struct is updated
+    uint64_t nonce;
+    // Size of the journal window
+    int w, h;
+  } set_journal_size;
 
   boost::interprocess::interprocess_condition cond;
 

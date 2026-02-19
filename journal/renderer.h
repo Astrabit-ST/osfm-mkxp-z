@@ -18,6 +18,7 @@ struct Renderer {
 
   void set_image(const char *filename);
   void move_window_to(int x, int y);
+  void resize_window(int w, int h);
 
   ~Renderer();
 };
