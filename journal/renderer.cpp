@@ -103,20 +103,33 @@ SDL_HitTestResult Renderer::hit_test_fn(SDL_Window *window,
   return a > 10 ? SDL_HITTEST_DRAGGABLE : SDL_HITTEST_NORMAL;
 }
 
-void Renderer::set_image(char *filename) {
-  SDL_DestroySurface(surface);
-  SDL_DestroyTexture(texture);
-  stbi_image_free(pixels);
-
-  // FIXME error handling
+void Renderer::set_image(const char *filename) {
   FILE *file = fopen(filename, "rb");
   if (!file) {
     std::cerr << "failed to open file" << filename << std::endl;
     return;
   }
 
+  if (texture != nullptr) {
+    SDL_DestroyTexture(texture);
+    texture = nullptr;
+  }
+  if (surface != nullptr) {
+    SDL_DestroySurface(surface);
+    surface = nullptr;
+  }
+  if (pixels != nullptr) {
+    stbi_image_free(pixels);
+  }
+
   int w, h, comp;
   pixels = stbi_load_from_file(file, &w, &h, &comp, 4);
+  fclose(file);
+  if (pixels == nullptr) {
+    std::cerr << "failed to open file" << filename << std::endl;
+    return;
+  }
+
   surface =
       SDL_CreateSurfaceFrom(w, h, SDL_PIXELFORMAT_ABGR8888, pixels, w * 4);
   texture = SDL_CreateTextureFromSurface(renderer, surface);
@@ -130,8 +143,14 @@ void Renderer::move_window_to(int x, int y) {
 }
 
 Renderer::~Renderer() {
-  SDL_DestroyTexture(texture);
-  SDL_DestroySurface(surface);
-  stbi_image_free(pixels);
+  if (texture != nullptr) {
+    SDL_DestroyTexture(texture);
+  }
+  if (surface != nullptr) {
+    SDL_DestroySurface(surface);
+  }
+  if (pixels != nullptr) {
+    stbi_image_free(pixels);
+  }
   SDL_DestroyWindow(window);
 }

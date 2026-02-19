@@ -29,10 +29,7 @@ sources += [
     'journal.cpp',
     'niko_handling.cpp',
     'journal_handling.cpp',
-    'mq_consumer.cpp',
-    'mq_producer.cpp',
     'renderer.cpp',
-    'mq_wrapper.cpp'
 ]
 includes = [include_directories('stb', 'common')]
 

@@ -5,28 +5,67 @@
 #include "SDL_custom_events.h"
 #include "renderer.h"
 #include <SDL3/SDL_main.h>
-#include <boost/interprocess/ipc/message_queue.hpp>
+#include <atomic>
 #include <iostream>
 
-using namespace boost::interprocess;
+static boost::interprocess::shared_memory_object journal_shm;
+static boost::interprocess::mapped_region journal_region;
+static Journal *journal = nullptr;
 
-int consumer_loop(void *userdata);
-void consumer_stop();
+std::atomic<bool> consumer_stop_requested(false);
 
-int producer_loop(void *userdata);
-void producer_stop();
-void produce_message(Message message);
+static int consumer_loop(void *data) {
+  JournalGuard guard(*journal, false);
 
-enum UserEvent {
-  ChangeImage,
-  MoveTo,
-};
+  if (journal->active_count < SIZE_MAX) {
+    ++journal->active_count;
+  }
+
+  uint64_t image_nonce = journal->image.nonce;
+  uint64_t close_nonce = journal->close.nonce;
+  uint64_t set_journal_position_nonce = journal->set_journal_position.nonce;
+
+  while (!consumer_stop_requested) {
+    if (image_nonce != journal->image.nonce) {
+      image_nonce = journal->image.nonce;
+      SDL_Event event;
+      SDL_zero(event);
+      event.type = JOURNAL_SET_IMAGE;
+      event.user.data1 = new std::string(journal->image.path);
+      SDL_PushEvent(&event);
+    }
+
+    if (close_nonce != journal->close.nonce) {
+      close_nonce = journal->close.nonce;
+      SDL_Event event;
+      SDL_zero(event);
+      event.type = SDL_EVENT_QUIT;
+      SDL_PushEvent(&event);
+    }
+
+    if (set_journal_position_nonce != journal->set_journal_position.nonce) {
+      set_journal_position_nonce = journal->set_journal_position.nonce;
+      SDL_Event event;
+      SDL_zero(event);
+      event.type = JOURNAL_SET_WINDOW_POSITION;
+      event.user.data1 = new std::pair<int, int>(journal->set_journal_position.x, journal->set_journal_position.y);
+      SDL_PushEvent(&event);
+    }
+
+    journal->cond.wait(guard);
+  }
+
+  if (journal->active_count > 0) {
+    --journal->active_count;
+  }
+
+  return 0;
+}
 
 struct State {
   Renderer *renderer;
 
   SDL_Thread *consumer_thread;
-  SDL_Thread *producer_thread;
 
   State() {
     renderer = new Renderer();
@@ -35,10 +74,10 @@ struct State {
       exit(-1);
     }
 
-    consumer_thread = SDL_CreateThread(consumer_loop, "consumer_thread", NULL);
-    producer_thread = SDL_CreateThread(producer_loop, "producer_thread", NULL);
+    init_journal(journal_shm, journal_region, journal);
 
-    produce_message(Message{.tag = Message::Hello});
+    consumer_stop_requested = false;
+    consumer_thread = SDL_CreateThread(consumer_loop, "consumer_thread", NULL);
   }
 
   SDL_AppResult iterate() {
@@ -47,43 +86,59 @@ struct State {
   };
 
   SDL_AppResult sdl_event(SDL_Event *event) {
-    if (event->type == JOURNAL_CLOSE)
-      return stop();
-
     if (event->type == ONESHOT_LAUNCHED) {
       return SDL_APP_CONTINUE;
     }
 
     if (event->type == JOURNAL_SET_IMAGE) {
-      char *filename = (char *)event->user.data1;
-      renderer->set_image(filename);
-      free(filename);
+      std::string *filename = (std::string *)event->user.data1;
+      try {
+        renderer->set_image(filename->c_str());
+      } catch (...) {
+        delete filename;
+        throw;
+      }
+      delete filename;
+      return SDL_APP_CONTINUE;
+    }
+
+    if (event->type == JOURNAL_SET_WINDOW_POSITION) {
+      std::pair<int, int> *coords = (std::pair<int, int> *)event->user.data1;
+      try {
+        renderer->move_window_to(coords->first, coords->second);
+      } catch (...) {
+        delete coords;
+        throw;
+      }
+      delete coords;
       return SDL_APP_CONTINUE;
     }
 
     switch (event->type) {
     case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
     case SDL_EVENT_QUIT:
-      return stop();
+      return SDL_APP_SUCCESS;
     case SDL_EVENT_WINDOW_MOVED:
-      Message message = {.tag = Message::WindowPosition,
-                         .val = {{event->window.data1, event->window.data2}}};
-      produce_message(message);
+      {
+        JournalGuard guard(*journal, true);
+        ++journal->get_journal_position.nonce;
+        journal->get_journal_position.x = event->window.data1;
+        journal->get_journal_position.y = event->window.data2;
+      }
       return SDL_APP_CONTINUE;
     }
 
     return SDL_APP_CONTINUE;
   };
 
-  SDL_AppResult stop() {
-    // Terminate renderer
-    produce_message(Message{.tag = Message::Goodbye});
-    consumer_stop();
-    producer_stop();
-    return SDL_APP_SUCCESS;
+  ~State() {
+    consumer_stop_requested = true;
+    try {
+      journal->cond.notify_all();
+    } catch (...) {}
+    SDL_WaitThread(consumer_thread, nullptr);
+    deinit_journal(journal_shm, journal_region, journal);
   }
-
-  ~State() { SDL_WaitThread(consumer_thread, NULL); }
 };
 
 void journal_handling(int argc, char **argv) {
