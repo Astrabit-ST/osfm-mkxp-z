@@ -109,7 +109,7 @@ if host_system == 'windows'
     global_include_dirs += include_directories('windows')
 else
     subdir('linux')
-    rpath = '$ORIGIN/lib'
+    rpath = '$ORIGIN'
     if get_option('appimage') != true
         if sizeof['long'] == 8 and get_option('force32') != true
             rpath += '64'

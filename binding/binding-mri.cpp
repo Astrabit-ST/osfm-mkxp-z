@@ -1206,9 +1206,11 @@ static void mriBindingExecute() {
 
   // Add the proper load paths. It needs to be added to $LOAD_PATH, otherwise
   // encodings won't load..?
+  // TODO sort out load paths because this is jank and sucks, adding external gems is complicated and frustrating
   rb_eval_string(
-      "$LOAD_PATH.unshift(File.join(Dir.pwd, 'lib', 'ruby'))\n"
-      "$LOAD_PATH.unshift(File.join(Dir.pwd, 'lib', 'ruby', RUBY_PLATFORM))\n");
+      "$LOAD_PATH.unshift(File.join(Dir.pwd, 'lib-" RUBY_PLATFORM "', 'ruby'))\n"
+      "$LOAD_PATH.unshift(File.join(Dir.pwd, 'lib-" RUBY_PLATFORM "', 'ruby', RUBY_PLATFORM))\n"
+      "$LOAD_PATH.unshift(File.join(Dir.pwd, 'lib-" RUBY_PLATFORM "', 'gems'))\n");
 
   std::vector<const char *> rubyArgsC{"oneshot"};
   rubyArgsC.push_back("-e ");
