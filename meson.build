@@ -98,6 +98,14 @@ subdir('assets')
 subdir('journal')
 subdir('scripts')
 
+if host_system != 'windows'
+    import('gnome').compile_schemas(
+        depend_files: [
+            'osfm.gschema.xml',
+        ],
+    )
+endif
+
 global_include_dirs += include_directories('src', 'binding')
 
 rpath = ''

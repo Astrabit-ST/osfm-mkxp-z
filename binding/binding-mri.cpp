@@ -121,6 +121,8 @@ void modshotwindowBindingInit();
 void modshotSystemBindingInit();
 void osfmBindingInit();
 void osfmCameraBindingInit();
+void osfmRegistryBindingInit();
+void osfmRegistryBindingTerminate();
 
 RB_METHOD(mkxpDelta);
 RB_METHOD(mriPrint);
@@ -218,6 +220,7 @@ static void mriBindingInit() {
   modshotSystemBindingInit();
   osfmBindingInit();
   osfmCameraBindingInit();
+  osfmRegistryBindingInit();
 
   VALUE _mkxp_module = rb_define_module("MKXP");
   _rb_define_module_function(_mkxp_module, "allow_force_quit",
@@ -1324,6 +1327,7 @@ static void mriBindingTerminate() {
 #ifdef __linux__
   oneshotWallpaperBindingTerminate();
 #endif
+  osfmRegistryBindingTerminate();
   throw Exception(Exception::SystemExit, " ");
 }
 

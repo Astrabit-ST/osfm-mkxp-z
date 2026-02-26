@@ -42,6 +42,7 @@ binding_source = [files(
     'modshot-system-binding.cpp',
     'osfm-screen-binding.cpp',
     'osfm-camera-binding.cpp',
+    'osfm-registry-binding.cpp',
 )]
 
 audio_binding_source = [files(
