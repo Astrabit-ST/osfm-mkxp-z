@@ -1,5 +1,5 @@
 <schemalist>
-  <schema id="astrabit.OneShotFadingMemory" path="/astrabit/OneShotFadingMemory/">
+  <schema id="astrabit.TWO" path="/astrabit/TWO/">
     <key name="example-boolean-key" type="b"><default>false</default></key>
     <key name="example-integer-key" type="i"><default>0</default></key>
     <key name="example-string-key" type="s"><default>""</default></key>

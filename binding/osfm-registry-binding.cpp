@@ -252,7 +252,7 @@ void osfmRegistryBindingInit() {
 #ifdef _WIN32
   LSTATUS error = RegCreateKeyExA(
     HKEY_CURRENT_USER,
-    "Software\\astrabit\\OneShotFadingMemory",
+    "Software\\astrabit\\TWO",
     0,
     nullptr,
     REG_OPTION_NON_VOLATILE,
@@ -276,7 +276,7 @@ void osfmRegistryBindingInit() {
     }
     std::exit(1);
   }
-  schema = g_settings_schema_source_lookup(source, "astrabit.OneShotFadingMemory", false);
+  schema = g_settings_schema_source_lookup(source, "astrabit.TWO", false);
   if (schema == nullptr) {
     g_free(source);
     source = nullptr;
