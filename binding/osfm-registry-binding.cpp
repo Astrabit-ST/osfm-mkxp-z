@@ -8,7 +8,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
-HKEY hkey = HKEY_CURRENT_USER;
+static HKEY hkey = HKEY_CURRENT_USER;
 #else
 #include <gio/gio.h>
 static GSettingsSchemaSource *source = nullptr;
@@ -44,6 +44,7 @@ RB_METHOD_GUARD(registry_get_boolean) {
 
 #ifdef _WIN32
   DWORD value;
+  DWORD size = sizeof value;
   LSTATUS error = RegGetValueA(
     hkey,
     nullptr,
@@ -51,7 +52,7 @@ RB_METHOD_GUARD(registry_get_boolean) {
     RRF_RT_REG_DWORD,
     nullptr,
     &value,
-    nullptr
+    &size
   );
   if (error != ERROR_SUCCESS) {
     value = 0;
@@ -80,7 +81,7 @@ RB_METHOD_GUARD(registry_set_boolean) {
     key,
     REG_DWORD,
     &value_dword,
-    nullptr
+    sizeof value_dword
   );
 #else
   verify_key(key, G_VARIANT_TYPE_BOOLEAN);
@@ -99,6 +100,7 @@ RB_METHOD_GUARD(registry_get_integer) {
 
 #ifdef _WIN32
   DWORD value;
+  DWORD size = sizeof value;
   LSTATUS error = RegGetValueA(
     hkey,
     nullptr,
@@ -106,7 +108,7 @@ RB_METHOD_GUARD(registry_get_integer) {
     RRF_RT_REG_DWORD,
     nullptr,
     &value,
-    nullptr
+    &size
   );
   if (error != ERROR_SUCCESS) {
     value = 0;
@@ -135,7 +137,7 @@ RB_METHOD_GUARD(registry_set_integer) {
     key,
     REG_DWORD,
     &value_dword,
-    nullptr
+    sizeof value_dword
   );
 #else
   verify_key(key, G_VARIANT_TYPE_INT32);
@@ -154,7 +156,7 @@ RB_METHOD_GUARD(registry_get_string) {
 
 #ifdef _WIN32
   std::vector<char> buffer;
-  size_t size;
+  DWORD size;
   LSTATUS error = RegGetValueA(
     hkey,
     nullptr,
@@ -166,7 +168,6 @@ RB_METHOD_GUARD(registry_get_string) {
   );
   if (error != ERROR_SUCCESS) {
     buffer.clear();
-    buffer.push_back(0);
   } else {
     do {
       buffer.resize(size);
@@ -182,9 +183,9 @@ RB_METHOD_GUARD(registry_get_string) {
     } while (error == ERROR_MORE_DATA);
     if (error != ERROR_SUCCESS) {
       buffer.clear();
-      buffer.push_back(0);
     }
   }
+  buffer.push_back(0);
   VALUE value_obj = rb_utf8_str_new_cstr(buffer.data());
 #else
   verify_key(key, G_VARIANT_TYPE_STRING);
