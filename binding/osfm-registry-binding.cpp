@@ -1,4 +1,5 @@
 #include <vector>
+#include <cstring>
 
 #include "binding-util.h"
 #include "eventthread.h"
