@@ -118,7 +118,7 @@ RB_METHOD_GUARD(registry_get_integer) {
   int value = g_settings_get_int(settings, key);
 #endif
 
-  return RB_INT2FIX(value);
+  return RB_INT2FIX((int)value);
 }
 RB_METHOD_GUARD_END
 
@@ -130,7 +130,7 @@ RB_METHOD_GUARD(registry_set_integer) {
   rb_get_args(argc, argv, "zi", &key, &value RB_ARG_END);
 
 #ifdef _WIN32
-  DWORD value_dword = value;
+  DWORD value_dword = (DWORD)value;
   RegSetKeyValueA(
     hkey,
     nullptr,
