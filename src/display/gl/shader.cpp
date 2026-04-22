@@ -66,6 +66,7 @@
 #include "cubic_lens.frag.xxd"
 #include "chronos.frag.xxd"
 #include "water.frag.xxd"
+#include "paletteSwap.frag.xxd"
 #endif
 
 #ifdef MKXPZ_BUILD_XCODE
@@ -946,4 +947,30 @@ void WaterShader::setiTime(const float value)
 void WaterShader::setOpacity(const float value)
 {
 	gl.Uniform1f(u_opacity, value);
+}
+
+PaletteSwapShader::PaletteSwapShader()
+{
+	INIT_SHADER(simple, paletteSwap, PaletteSwapShader);
+
+	ShaderBase::init();
+
+	GET_U(palette);
+	GET_U(paletteWidth);
+	GET_U(paletteRow);
+}
+
+void PaletteSwapShader::setPalette(const TEX::ID value)
+{
+	setTexUniform(u_palette, 1, value);
+}
+
+void PaletteSwapShader::setPaletteWidth(int width)
+{
+	gl.Uniform1f(u_paletteWidth, (float)width);
+}
+
+void PaletteSwapShader::setPaletteRow(int row, int height)
+{
+	gl.Uniform1f(u_paletteRow, (float)row / (float)height);
 }
