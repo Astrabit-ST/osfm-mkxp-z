@@ -2606,4 +2606,6 @@ void Bitmap::paletteSwap(Bitmap &palette, int row) {
     p->blitQuad(quad);
     p->popViewport();
   }
+
+  p->onModified();
 }
