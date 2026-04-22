@@ -1,4 +1,4 @@
-project('mkxp-z', 'c', 'cpp', version: '2.4.2', meson_version: '>=0.56.0', default_options: ['cpp_std=c++17', 'buildtype=release'])
+project('mkxp-z', 'c', 'cpp', version: '2.4.2', meson_version: '>=0.64.0', default_options: ['cpp_std=c++17', 'buildtype=release'])
 
 host_system = host_machine.system()
 
@@ -99,11 +99,12 @@ subdir('journal')
 subdir('scripts')
 
 if host_system != 'windows'
-    import('gnome').compile_schemas(
-        depend_files: [
-            'osfm.gschema.xml',
-        ],
+    global_sources += import('fs').copyfile(
+        'osfm.gschema.xml',
+        install: true,
+        install_dir: 'share/glib-2.0/schemas',
     )
+    import('gnome').post_install(glib_compile_schemas: true)
 endif
 
 global_include_dirs += include_directories('src', 'binding')
