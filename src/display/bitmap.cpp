@@ -2590,6 +2590,11 @@ void Bitmap::paletteSwap(Bitmap &palette, int row) {
     if (!isMega()) {
       TEX::bind(getGLTypes().tex);
       TEX::uploadImage(bitmapSurf->w, bitmapSurf->h, bitmapSurf->pixels, GL_RGBA);
+      SDL_DestroySurface(bitmapSurf);
+    }
+
+    if (!palette.isMega()) {
+      SDL_DestroySurface(paletteSurf);
     }
   } else { // Hardware-accelerated implementation
     FloatRect texRect(rect());
