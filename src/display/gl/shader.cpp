@@ -972,5 +972,5 @@ void PaletteSwapShader::setPaletteWidth(int width)
 
 void PaletteSwapShader::setPaletteRow(int row, int height)
 {
-	gl.Uniform1f(u_paletteRow, (float)row / (float)height);
+	gl.Uniform1f(u_paletteRow, ((float)row + 0.5f) / (float)height);
 }
