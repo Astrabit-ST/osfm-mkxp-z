@@ -15,9 +15,6 @@
     // slash instead (even on Windows).
 
     // Some influential environment variables, set them to either "1" or "0":
-    // "MKXPZ_WINDOWS_CONSOLE"
-    //     - Enables/disables the extra console window on Windows. It appears by
-    //       default whenever mkxp-z is started in debug mode.
     // "MKXPZ_MACOS_METAL"
     //     - Setting this will influence the rendering backend used.
     //       Probably not a good idea to mess with it unless you have some kind of issue.
@@ -31,6 +28,9 @@
     //       this will enable a full performance HUD containing more details than
     //       the built-in framerate display.
 
+    // Should spawn a console window on Windows?
+    // Replaced "MKXPZ_WINDOWS_CONSOLE" environment variable
+    // "winConsole": false,
 
     // Specify the RGSS version to run under.
     // Possible values are 0, 1, 2, 3. If set to 0,

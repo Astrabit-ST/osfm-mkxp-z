@@ -3,7 +3,7 @@
 #include <wchar.h>
 #include <windows.h>
 
-wchar_t *ARGV0 = L"lib\\oneshot.exe";
+wchar_t *ARGV0 = L"lib-x64-mingw-ucrt\\oneshot.exe";
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                    LPSTR lpCmdLine, int nCmdShow) {
@@ -36,7 +36,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     argv[0] = ARGV0;
   }
 
-  _wexecv(L"lib\\oneshot.exe", (const wchar_t *const *)argv);
+  _wexecv(L"lib-x64-mingw-ucrt\\oneshot.exe", (const wchar_t *const *)argv); // why is this not using ARGV0?
 
   char msg[512];
   snprintf(msg, 512, "Cannot start ModShot for some reason.\nPlease check your ModShot installation.\nError code: %s", strerror(errno));

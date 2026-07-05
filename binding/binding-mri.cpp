@@ -107,6 +107,7 @@ void httpBindingInit();
 void oneshotBindingInit();
 void oneshotSteamBindingInit();
 void oneshotJournalBindingInit();
+void cleanup_journal_stuff();
 void oneshotNikoBindingInit();
 void oneshotWallpaperBindingInit();
 #ifdef __linux__
@@ -120,6 +121,8 @@ void modshotwindowBindingInit();
 void modshotSystemBindingInit();
 void osfmBindingInit();
 void osfmCameraBindingInit();
+void osfmRegistryBindingInit();
+void osfmRegistryBindingTerminate();
 
 RB_METHOD(mkxpDelta);
 RB_METHOD(mriPrint);
@@ -217,6 +220,7 @@ static void mriBindingInit() {
   modshotSystemBindingInit();
   osfmBindingInit();
   osfmCameraBindingInit();
+  osfmRegistryBindingInit();
 
   VALUE _mkxp_module = rb_define_module("MKXP");
   _rb_define_module_function(_mkxp_module, "allow_force_quit",
@@ -1205,9 +1209,11 @@ static void mriBindingExecute() {
 
   // Add the proper load paths. It needs to be added to $LOAD_PATH, otherwise
   // encodings won't load..?
+  // TODO sort out load paths because this is jank and sucks, adding external gems is complicated and frustrating
   rb_eval_string(
-      "$LOAD_PATH.unshift(File.join(Dir.pwd, 'lib', 'ruby'))\n"
-      "$LOAD_PATH.unshift(File.join(Dir.pwd, 'lib', 'ruby', RUBY_PLATFORM))\n");
+      "$LOAD_PATH.unshift(File.join(Dir.pwd, 'lib-" RUBY_PLATFORM "', 'ruby'))\n"
+      "$LOAD_PATH.unshift(File.join(Dir.pwd, 'lib-" RUBY_PLATFORM "', 'ruby', RUBY_PLATFORM))\n"
+      "$LOAD_PATH.unshift(File.join(Dir.pwd, 'lib-" RUBY_PLATFORM "', 'gems'))\n");
 
   std::vector<const char *> rubyArgsC{"oneshot"};
   rubyArgsC.push_back("-e ");
@@ -1308,6 +1314,7 @@ static void mriBindingExecute() {
   if (!NIL_P(exc) && !rb_obj_is_kind_of(exc, rb_eSystemExit))
     showExc(exc, btData);
 
+  cleanup_journal_stuff();
   ruby_cleanup(0);
 
   // Force allow exit
@@ -1320,6 +1327,7 @@ static void mriBindingTerminate() {
 #ifdef __linux__
   oneshotWallpaperBindingTerminate();
 #endif
+  osfmRegistryBindingTerminate();
   throw Exception(Exception::SystemExit, " ");
 }
 

@@ -32,6 +32,7 @@ embedded_shaders = [
     'crt.frag',
     'cubic_lens.frag',
     'water.frag',
+    'paletteSwap.frag',
 ]
 
 # xBRZ shader is GPLv3.

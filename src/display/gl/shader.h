@@ -451,6 +451,19 @@ private:
 	GLint u_iTime, u_opacity;
 };
 
+class PaletteSwapShader : public ShaderBase
+{
+public:
+	PaletteSwapShader();
+
+	void setPalette(const TEX::ID value);
+	void setPaletteWidth(int width);
+	void setPaletteRow(int row, int height);
+
+private:
+	GLint u_palette, u_paletteWidth, u_paletteRow;
+};
+
 /* Global object containing all available shaders */
 struct ShaderSet
 {
@@ -479,6 +492,7 @@ struct ShaderSet
 	ChronosShader chronos;
 	CubicShader cubic;
 	WaterShader water;
+	PaletteSwapShader paletteSwap;
 #ifdef MKXPZ_SSL
 	XbrzShader xbrz;
 #endif

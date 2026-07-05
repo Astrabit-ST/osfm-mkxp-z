@@ -1,4 +1,4 @@
-project('mkxp-z', 'c', 'cpp', version: '2.4.2', meson_version: '>=0.56.0', default_options: ['cpp_std=c++17', 'buildtype=release'])
+project('mkxp-z', 'c', 'cpp', version: '2.4.2', meson_version: '>=0.64.0', default_options: ['cpp_std=c++17', 'buildtype=release'])
 
 host_system = host_machine.system()
 
@@ -27,6 +27,8 @@ global_args += '-DMKXPZ_BUILD_MESON'
 global_args += '-DMKXPZ_VERSION="@0@"'.format(meson.project_version())
 global_args += '-DMKXPZ_GIT_HASH="@0@"'.format(git_hash)
 global_args += '-DHAVE_NANOSLEEP'
+
+global_args += '-DBOOST_INTERPROCESS_FORCE_NATIVE_EMULATION'
 
 disable_openal = get_option('disable_openal')
 if disable_openal
@@ -96,6 +98,15 @@ subdir('assets')
 subdir('journal')
 subdir('scripts')
 
+if host_system != 'windows'
+    global_sources += import('fs').copyfile(
+        'osfm.gschema.xml',
+        install: true,
+        install_dir: 'share/glib-2.0/schemas',
+    )
+    import('gnome').post_install(glib_compile_schemas: true)
+endif
+
 global_include_dirs += include_directories('src', 'binding')
 
 rpath = ''
@@ -107,7 +118,7 @@ if host_system == 'windows'
     global_include_dirs += include_directories('windows')
 else
     subdir('linux')
-    rpath = '$ORIGIN/lib'
+    rpath = '$ORIGIN'
     if get_option('appimage') != true
         if sizeof['long'] == 8 and get_option('force32') != true
             rpath += '64'

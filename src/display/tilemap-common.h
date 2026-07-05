@@ -71,6 +71,16 @@ getTilePos(const Vec2i &pixelPos)
 	return (pixelPos & ~(32-1)) / 32;
 }
 
+/* Calculate the tile x/y on which this pixel x/y lies when zoom is applied */
+static inline Vec2i
+getTilePosZoomed(const Vec2i &pixelPos, float zoomX, float zoomY)
+{
+    return {
+        static_cast<int>(std::floor(pixelPos.x / (32 * zoomX))),
+        static_cast<int>(std::floor(pixelPos.y / (32 * zoomY)))
+    };
+}
+
 enum AtSubPos
 {
 	TopLeft          = 0,
@@ -82,28 +92,28 @@ enum AtSubPos
 };
 
 static inline void
-atSelectSubPos(FloatRect &pos, int i)
+atSelectSubPos(FloatRect &pos, int i, float zoomX = 1, float zoomY = 1)
 {
 	switch (i)
 	{
 	case TopLeft:
 		return;
 	case TopRight:
-		pos.x += 16;
+		pos.x += 16 * zoomX;
 		return;
 	case BottomLeft:
-		pos.y += 16;
+		pos.y += 16 * zoomY;
 		return;
 	case BottomRight:
-		pos.x += 16;
-		pos.y += 16;
+		pos.x += 16 * zoomX;
+		pos.y += 16 * zoomY;
 		return;
 	case BottomLeftTable:
-		pos.y += 24;
+		pos.y += 24 * zoomY;
 		return;
 	case BottomRightTable:
-		pos.x += 16;
-		pos.y += 24;
+		pos.x += 16 * zoomX;
+		pos.y += 24 * zoomY;
 		return;
 	default:
 		assert(!"Unreachable");

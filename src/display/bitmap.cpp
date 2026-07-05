@@ -2545,3 +2545,72 @@ void Bitmap::loresDisposal() {
   loresDispCon.disconnect();
   dispose();
 }
+
+void Bitmap::paletteSwap(Bitmap &palette, int row) {
+  guardDisposed();
+  palette.guardDisposed();
+
+  if (p->animation.enabled || palette.p->animation.enabled) {
+    throw Exception(Exception::MKXPError, "Operation not supported for animated bitmaps");
+  }
+
+  if (row < 0 || row >= palette.height()) {
+    throw Exception(Exception::MKXPError, "Row out of bounds");
+  }
+
+  if (isMega() || palette.isMega()) { // Software implementation
+    SDL_Surface *bitmapSurf = megaSurface();
+    SDL_Surface *paletteSurf = palette.megaSurface();
+
+    // Transfer the target bitmap from GPU to CPU if the bitmap is not a mega surface
+    if (!isMega()) {
+      bitmapSurf = SDL_CreateSurface(width(), height(), SDL_GetPixelFormatForMasks(p->format->bits_per_pixel, p->format->Rmask, p->format->Gmask, p->format->Bmask, p->format->Amask));
+      getRaw(bitmapSurf->pixels, 4 * bitmapSurf->w * bitmapSurf->h);
+    }
+
+    // Transfer the palette from GPU to CPU if the palette is not a mega surface
+    if (!palette.isMega()) {
+      paletteSurf = SDL_CreateSurface(palette.width(), palette.height(), SDL_GetPixelFormatForMasks(palette.p->format->bits_per_pixel, palette.p->format->Rmask, palette.p->format->Gmask, palette.p->format->Bmask, palette.p->format->Amask));
+      palette.getRaw(paletteSurf->pixels, 4 * paletteSurf->w * paletteSurf->h);
+    }
+
+    for (int r = 0; r < bitmapSurf->h; ++r) {
+      for (int c = 0; c < bitmapSurf->w; ++c) {
+        uint32_t &pixel = ((uint32_t *)((uint8_t *)bitmapSurf->pixels + (size_t)r * (size_t)bitmapSurf->pitch))[c];
+        for (int i = 0; i < paletteSurf->w; ++i) {
+          if (pixel == ((uint32_t *)paletteSurf->pixels)[i]) {
+            pixel = ((uint32_t *)((uint8_t *)paletteSurf->pixels + (size_t)row * (size_t)paletteSurf->pitch))[i];
+            break;
+          }
+        }
+      }
+    }
+
+    // Transfer the modified target bitmap from CPU to GPU if the bitmap is not a mega surface
+    if (!isMega()) {
+      TEX::bind(getGLTypes().tex);
+      TEX::uploadImage(bitmapSurf->w, bitmapSurf->h, bitmapSurf->pixels, GL_RGBA);
+      SDL_DestroySurface(bitmapSurf);
+    }
+
+    if (!palette.isMega()) {
+      SDL_DestroySurface(paletteSurf);
+    }
+  } else { // Hardware-accelerated implementation
+    FloatRect texRect(rect());
+    Quad &quad = shState->gpQuad();
+    quad.setTexPosRect(texRect, texRect);
+    PaletteSwapShader &shader = shState->shaders().paletteSwap;
+    shader.bind();
+    shader.setPalette(palette.getGLTypes().tex);
+    shader.setPaletteWidth(palette.getGLTypes().width);
+    shader.setPaletteRow(row, palette.getGLTypes().height);
+    FBO::bind(p->gl.fbo);
+    p->pushSetViewport(shader);
+    p->bindTexture(shader, false);
+    p->blitQuad(quad);
+    p->popViewport();
+  }
+
+  p->onModified();
+}

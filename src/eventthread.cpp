@@ -96,7 +96,7 @@ EventThread::TouchState EventThread::touchState;
 SDL_AtomicInt EventThread::verticalScrollDistance;
 
 /* User event codes */
-enum {
+enum { // FIXME replace with SDL_RunOnMainThread(), fix thread safety issues
   REQUEST_SETFULLSCREEN = 0,
   REQUEST_WINRESIZE,
   REQUEST_WINREPOSITION,
@@ -603,8 +603,20 @@ void EventThread::process(RGSSThreadData &rtData) {
           }
           SDL_SetBooleanProperty(props, prop, true);
         }
-        new_window = SDL_CreateWindowWithProperties(props);
+
+        SDL_Window* created_window = SDL_CreateWindowWithProperties(props);
+        new_window = created_window;
         SDL_DestroyProperties(props);
+
+#ifdef __WIN32__
+        // Must set `WS_EX_LAYERED` flag for `GWL_EXSTYLE` to ensure window opacity works with `layered over DXGI Swapchain`
+        // SDL only ever sets it with `SDL_SetWindowOpacity`, but only if the value is no >= 1, so it's more of a side effect
+        props = SDL_GetWindowProperties(created_window);
+        HWND hwnd = (HWND)SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+        const LONG style = GetWindowLong(hwnd, GWL_EXSTYLE);
+        SetWindowLong(hwnd, GWL_EXSTYLE, style | WS_EX_LAYERED);
+        SDL_DestroyProperties(props);
+#endif
         break;
       }
       case REQUEST_DESTROY_WINDOW: {

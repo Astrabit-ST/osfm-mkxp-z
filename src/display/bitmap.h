@@ -156,6 +156,8 @@ public:
 
   void assumeRubyGC();
 
+  void paletteSwap(Bitmap &palette, int row);
+
 private:
   void releaseResources();
   sigslot::connection loresDispCon;

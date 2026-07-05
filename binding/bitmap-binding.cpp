@@ -819,6 +819,22 @@ RB_METHOD_GUARD(bitmapInitializeCopy) {
 }
 RB_METHOD_GUARD_END
 
+RB_METHOD_GUARD(bitmapPaletteSwap) {
+    RB_UNUSED_PARAM;
+
+    VALUE paletteObj;
+    int row;
+    rb_get_args(argc, argv, "oi", &paletteObj, &row RB_ARG_END);
+
+    Bitmap *bitmap = getPrivateData<Bitmap>(self);
+    Bitmap *palette = getPrivateDataCheck<Bitmap>(paletteObj, BitmapType);
+
+    bitmap->paletteSwap(*palette, row);
+
+    return Qnil;
+}
+RB_METHOD_GUARD_END
+
 void bitmapBindingInit() {
     VALUE klass = rb_define_class("Bitmap", rb_cObject);
 #if RAPI_FULL > 187
@@ -878,6 +894,8 @@ void bitmapBindingInit() {
     _rb_define_method(klass, "looping", bitmapGetLooping);
     _rb_define_method(klass, "looping=", bitmapSetLooping);
     _rb_define_method(klass, "snap_to_bitmap", bitmapSnapToBitmap);
+
+    _rb_define_method(klass, "palette_swap", bitmapPaletteSwap);
     
     INIT_PROP_BIND(Bitmap, Font, "font");
 }
