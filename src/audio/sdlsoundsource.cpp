@@ -94,8 +94,8 @@ struct SDLSoundSource : ALDataSource {
       Sound_FreeSample(sample);
       SDL_SeekIO(unclosableOps, 0, SDL_IO_SEEK_SET);
 
-      Sound_AudioInfo desired;
-      SDL_memset(&desired, '\0', sizeof(Sound_AudioInfo));
+      SDL_AudioSpec desired;
+      SDL_memset(&desired, '\0', sizeof(SDL_AudioSpec));
       desired.format = SDL_AUDIO_F32;
 
       sample = Sound_NewSample(unclosableOps, extension, &desired, maxBufSize);
@@ -109,7 +109,7 @@ struct SDLSoundSource : ALDataSource {
     sampleSize = formatSampleSize(sample->actual.format);
 
     alFormat = chooseALFormat(sampleSize, sample->actual.channels);
-    alFreq = sample->actual.rate;
+    alFreq = sample->actual.freq;
   }
 
   ~SDLSoundSource() {
@@ -146,7 +146,7 @@ struct SDLSoundSource : ALDataSource {
     return ALDataSource::NoError;
   }
 
-  int sampleRate() { return sample->actual.rate; }
+  int sampleRate() { return sample->actual.freq; }
 
   void seekToOffset(float seconds) {
     if (seconds <= 0)
