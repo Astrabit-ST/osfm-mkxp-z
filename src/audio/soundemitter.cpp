@@ -192,7 +192,7 @@ struct SoundOpenHandler : FileSystem::OpenHandler {
     ALenum alFormat = chooseALFormat(sampleSize, sample->actual.channels);
 
     AL::Buffer::uploadData(buffer->alBuffer, alFormat, sample->buffer,
-                           buffer->bytes, sample->actual.rate);
+                           buffer->bytes, sample->actual.freq);
 
     Sound_FreeSample(sample);
 
