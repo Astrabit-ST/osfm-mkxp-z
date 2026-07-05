@@ -114,7 +114,7 @@ jobs:
       - name: Build executable
         run: |
           source linux/vars.sh
-          meson build --bindir=. --prefix=$GITHUB_WORKSPACE/build/lib
+          meson setup build --bindir=. --prefix=$GITHUB_WORKSPACE/build/lib
           cd build
           ninja
           ninja install

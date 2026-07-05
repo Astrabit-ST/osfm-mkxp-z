@@ -57,14 +57,27 @@ if host_system == 'windows'
     link_args += ['-lws2_32', '-liphlpapi']
 endif
 
-executable(
-    '_______',
-    sources: sources,
-    dependencies: [sdl3, boost],
-    cpp_args: global_args,
-    link_args: link_args,
-    win_subsystem: 'windows',
-    include_directories: includes,
-)
+if host_system != 'windows'
+    iconv = compilers['cpp'].find_library('iconv')
+    executable(
+        '_______',
+        sources: sources,
+        dependencies: [sdl3, boost, iconv],
+        cpp_args: global_args,
+        link_args: link_args,
+        win_subsystem: 'windows',
+        include_directories: includes,
+    )
+else
+    executable(
+        '_______',
+        sources: sources,
+        dependencies: [sdl3, boost],
+        cpp_args: global_args,
+        link_args: link_args,
+        win_subsystem: 'windows',
+        include_directories: includes,
+    )
+endif
 
 global_include_dirs += include_directories('common')
