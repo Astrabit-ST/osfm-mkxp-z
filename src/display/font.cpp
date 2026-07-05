@@ -317,7 +317,7 @@ struct FontPrivate {
   }
 };
 
-std::string FontPrivate::defaultName = "Arial";
+std::string FontPrivate::defaultName = "Terminus (TTF)";
 int FontPrivate::defaultSize = 22;
 bool FontPrivate::defaultBold = false;
 bool FontPrivate::defaultItalic = false;
@@ -431,7 +431,7 @@ void Font::initDefaults(const SharedFontState &sfs) {
   switch (rgssVer) {
   case 1:
     // FIXME: Japanese version has "MS PGothic" instead
-    names.push_back("Arial");
+    names.push_back("Terminus (TTF)");
     break;
 
   case 2:
