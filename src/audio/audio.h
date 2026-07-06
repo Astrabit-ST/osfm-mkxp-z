@@ -44,14 +44,14 @@ public:
 	void bgmPlay(const char *filename,
 	             int volume = 100,
 	             int pitch = 100,
-	             float pos = 0);
+	             double pos = 0);
 	void bgmStop();
 	void bgmFade(int time);
 
 	void bgsPlay(const char *filename,
 	             int volume = 100,
 	             int pitch = 100,
-	             float pos = 0);
+	             double pos = 0);
 	void bgsStop();
 	void bgsFade(int time);
 
@@ -66,8 +66,8 @@ public:
 	            int pitch = 100);
 	void seStop();
 
-	float bgmPos();
-	float bgsPos();
+	double bgmPos();
+	double bgsPos();
 
 	void reset();
 
