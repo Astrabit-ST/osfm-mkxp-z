@@ -26,150 +26,176 @@
 
 #include <SDL3_sound/SDL_sound.h>
 
-static int SDL_RWopsCloseNoop(SDL_IOStream *ops) { return 0; }
+static int SDL_RWopsCloseNoop(SDL_IOStream *ops) {
+	return 0;
+}
 
-struct SDLSoundSource : ALDataSource {
-  Sound_Sample *sample;
-  SDL_IOStream *srcOps;
-  SDL_IOStream *unclosableOps;
-  uint8_t sampleSize;
-  bool looped;
+struct SDLSoundSource : ALDataSource
+{
+	Sound_Sample *sample;
+	SDL_IOStream *srcOps;
+	SDL_IOStream *unclosableOps;
+	uint8_t sampleSize;
+	bool looped;
 
-  ALenum alFormat;
-  ALsizei alFreq;
+	ALenum alFormat;
+	ALsizei alFreq;
 
-  SDLSoundSource(SDL_IOStream *ops, const char *extension, uint32_t maxBufSize,
-                 bool looped)
-      : srcOps(ops), looped(looped) {
-    SDL_IOStreamInterface interface;
-    SDL_INIT_INTERFACE(&interface);
-    interface.read = [](void *context, void *ptr, size_t size,
-                        SDL_IOStatus *status) -> size_t {
-      SDL_IOStream *ops = static_cast<SDL_IOStream *>(context);
-      size_t read = SDL_ReadIO(ops, ptr, size);
-      *status = SDL_GetIOStatus(ops);
-      return read;
-    };
-    interface.write = [](void *context, const void *ptr, size_t size,
-                         SDL_IOStatus *status) -> size_t {
-      SDL_IOStream *ops = static_cast<SDL_IOStream *>(context);
-      size_t written = SDL_WriteIO(ops, ptr, size);
-      *status = SDL_GetIOStatus(ops);
-      return written;
-    };
-    interface.seek = [](void *context, int64_t offset,
-                        SDL_IOWhence whence) -> int64_t {
-      SDL_IOStream *ops = static_cast<SDL_IOStream *>(context);
-      int64_t pos = SDL_SeekIO(ops, offset, whence);
-      return pos;
-    };
-    interface.close = [](void *context) -> bool {
-      SDL_IOStream *ops = static_cast<SDL_IOStream *>(context);
-      return SDL_RWopsCloseNoop(ops);
-    };
-    unclosableOps = SDL_OpenIO(&interface, srcOps);
+	SDLSoundSource(SDL_IOStream *ops,
+	               const char *extension,
+	               uint32_t maxBufSize,
+	               bool looped)
+	    : srcOps(ops),
+	      looped(looped)
+	{
+		SDL_IOStreamInterface interface;
+		SDL_INIT_INTERFACE(&interface);
+		interface.read = [](void *context, void *ptr, size_t size, SDL_IOStatus *status) -> size_t {
+			SDL_IOStream *ops = static_cast<SDL_IOStream *>(context);
+			size_t read = SDL_ReadIO(ops, ptr, size);
+			*status = SDL_GetIOStatus(ops);
+			return read;
+		};
+		interface.write = [](void *context, const void *ptr, size_t size, SDL_IOStatus *status) -> size_t {
+			SDL_IOStream *ops = static_cast<SDL_IOStream *>(context);
+			size_t written = SDL_WriteIO(ops, ptr, size);
+			*status = SDL_GetIOStatus(ops);
+			return written;
+		};
+		interface.seek = [](void *context, int64_t offset, SDL_IOWhence whence) -> int64_t {
+			SDL_IOStream *ops = static_cast<SDL_IOStream *>(context);
+			int64_t pos = SDL_SeekIO(ops, offset, whence);
+			return pos;
+		};
+		interface.close= [](void *context) -> bool {
+			SDL_IOStream *ops = static_cast<SDL_IOStream *>(context);
+			return SDL_RWopsCloseNoop(ops);
+		};
+		unclosableOps = SDL_OpenIO(&interface, srcOps);
+		
+		sample = Sound_NewSample(unclosableOps, extension, 0, maxBufSize);
+		
+		if (!sample)
+		{
+			SDL_CloseIO(srcOps);
+			throw Exception(Exception::SDLError, "SDL_sound: %s", Sound_GetError());
+		}
 
-    sample = Sound_NewSample(unclosableOps, extension, 0, maxBufSize);
+		bool validFormat = true;
+		
+		switch (sample->actual.format)
+		{
+			// OpenAL Soft doesn't support S32 formats.
+			// https://github.com/kcat/openal-soft/issues/934
+			case SDL_AUDIO_S32LE :
+			case SDL_AUDIO_S32BE :
+				validFormat = false;
+		}
 
-    if (!sample) {
-      SDL_CloseIO(srcOps);
-      throw Exception(Exception::SDLError, "SDL_sound: %s", Sound_GetError());
-    }
+		if (!validFormat)
+		{
+			// Unfortunately there's no way to change the desired format of a sample.
+			// https://github.com/icculus/SDL_sound/issues/91
+			// So we just have to close the sample (which closes the file too),
+			// and retry with a new desired format.
+			Sound_FreeSample(sample);
+			SDL_SeekIO(unclosableOps, 0, SDL_IO_SEEK_SET);
+			
+			SDL_AudioSpec desired;
+			SDL_memset(&desired, '\0', sizeof(SDL_AudioSpec));
+			desired.format = SDL_AUDIO_F32;
 
-    bool validFormat = true;
+			sample = Sound_NewSample(unclosableOps, extension, &desired, maxBufSize);
 
-    switch (sample->actual.format) {
-    // OpenAL Soft doesn't support S32 formats.
-    // https://github.com/kcat/openal-soft/issues/934
-    case SDL_AUDIO_S32LE:
-    case SDL_AUDIO_S32BE:
-      validFormat = false;
-    }
+			if (!sample)
+			{
+				SDL_CloseIO(srcOps);
+				throw Exception(Exception::SDLError, "SDL_sound: %s", Sound_GetError());
+			}
+		}
 
-    if (!validFormat) {
-      // Unfortunately there's no way to change the desired format of a sample.
-      // https://github.com/icculus/SDL_sound/issues/91
-      // So we just have to close the sample (which closes the file too),
-      // and retry with a new desired format.
-      Sound_FreeSample(sample);
-      SDL_SeekIO(unclosableOps, 0, SDL_IO_SEEK_SET);
+		sampleSize = formatSampleSize(sample->actual.format);
 
-      SDL_AudioSpec desired;
-      SDL_memset(&desired, '\0', sizeof(SDL_AudioSpec));
-      desired.format = SDL_AUDIO_F32;
+		alFormat = chooseALFormat(sampleSize, sample->actual.channels);
+		alFreq = sample->actual.freq;
+	}
 
-      sample = Sound_NewSample(unclosableOps, extension, &desired, maxBufSize);
+	~SDLSoundSource()
+	{
+		Sound_FreeSample(sample);
+		SDL_CloseIO(srcOps);
+	}
 
-      if (!sample) {
-        SDL_CloseIO(srcOps);
-        throw Exception(Exception::SDLError, "SDL_sound: %s", Sound_GetError());
-      }
-    }
+	Status fillBuffer(AL::Buffer::ID alBuffer)
+	{
+		uint32_t decoded = Sound_Decode(sample);
 
-    sampleSize = formatSampleSize(sample->actual.format);
+		if (sample->flags & SOUND_SAMPLEFLAG_EAGAIN)
+		{
+			/* Try to decode one more time on EAGAIN */
+			decoded = Sound_Decode(sample);
 
-    alFormat = chooseALFormat(sampleSize, sample->actual.channels);
-    alFreq = sample->actual.freq;
-  }
+			/* Give up */
+			if (sample->flags & SOUND_SAMPLEFLAG_EAGAIN)
+				return ALDataSource::Error;
+		}
 
-  ~SDLSoundSource() {
-    Sound_FreeSample(sample);
-    SDL_CloseIO(srcOps);
-  }
+		if (sample->flags & SOUND_SAMPLEFLAG_ERROR)
+			return ALDataSource::Error;
 
-  Status fillBuffer(AL::Buffer::ID alBuffer) {
-    uint32_t decoded = Sound_Decode(sample);
+		AL::Buffer::uploadData(alBuffer, alFormat, sample->buffer, decoded, alFreq);
 
-    if (sample->flags & SOUND_SAMPLEFLAG_EAGAIN) {
-      /* Try to decode one more time on EAGAIN */
-      decoded = Sound_Decode(sample);
+		if (sample->flags & SOUND_SAMPLEFLAG_EOF)
+		{
+			if (looped)
+			{
+				Sound_Rewind(sample);
+				return ALDataSource::WrapAround;
+			}
+			else
+			{
+				return ALDataSource::EndOfStream;
+			}
+		}
 
-      /* Give up */
-      if (sample->flags & SOUND_SAMPLEFLAG_EAGAIN)
-        return ALDataSource::Error;
-    }
+		return ALDataSource::NoError;
+	}
 
-    if (sample->flags & SOUND_SAMPLEFLAG_ERROR)
-      return ALDataSource::Error;
+	int sampleRate()
+	{
+		return sample->actual.freq;
+	}
 
-    AL::Buffer::uploadData(alBuffer, alFormat, sample->buffer, decoded, alFreq);
+	void seekToOffset(double seconds)
+	{
+		if (seconds <= 0)
+		{
+			Sound_Rewind(sample);
+		}
+		else
+		{
+			// Unfortunately there is no easy API in SDL_sound for seeking with better precision than 1ms.
+			// TODO: Work around this by flooring instead of rounding, and then manually consuming the remaining samples.
+			Sound_Seek(sample, static_cast<uint32_t>(lround(seconds * 1000)));
+		}
+	}
 
-    if (sample->flags & SOUND_SAMPLEFLAG_EOF) {
-      if (looped) {
-        Sound_Rewind(sample);
-        return ALDataSource::WrapAround;
-      } else {
-        return ALDataSource::EndOfStream;
-      }
-    }
+	uint32_t loopStartFrames()
+	{
+		/* Loops from the beginning of the file */
+		return 0;
+	}
 
-    return ALDataSource::NoError;
-  }
-
-  int sampleRate() { return sample->actual.freq; }
-
-  void seekToOffset(double seconds) {
-    if (seconds <= 0)
-    {
-      Sound_Rewind(sample);
-    }
-    else
-    {
-      // Unfortunately there is no easy API in SDL_sound for seeking with better precision than 1ms.
-      // TODO: Work around this by flooring instead of rounding, and then manually consuming the remaining samples.
-      Sound_Seek(sample, static_cast<uint32_t>(lround(seconds * 1000)));
-    }
-  }
-
-  uint32_t loopStartFrames() {
-    /* Loops from the beginning of the file */
-    return 0;
-  }
-
-  bool setPitch(float) { return false; }
+	bool setPitch(float)
+	{
+		return false;
+	}
 };
 
-ALDataSource *createSDLSource(SDL_IOStream *ops, const char *extension,
-                              uint32_t maxBufSize, bool looped) {
-  return new SDLSoundSource(ops, extension, maxBufSize, looped);
+ALDataSource *createSDLSource(SDL_IOStream *ops,
+                              const char *extension,
+			                  uint32_t maxBufSize,
+			                  bool looped)
+{
+	return new SDLSoundSource(ops, extension, maxBufSize, looped);
 }
