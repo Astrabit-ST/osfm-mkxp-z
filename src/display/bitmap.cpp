@@ -2094,7 +2094,7 @@ void Bitmap::drawText(const IntRect &rect, const char *str, int align)
         /* set the next font render to render the outline */
         TTF_SetFontOutline(font, scaledOutlineSize);
         if (p->font->isSolid())
-            outline = TTF_RenderText_Blended(font, str, 0, co);
+            outline = TTF_RenderText_Solid(font, str, 0, co);
         else
             outline = TTF_RenderText_Blended(font, str, 0, co);
         
