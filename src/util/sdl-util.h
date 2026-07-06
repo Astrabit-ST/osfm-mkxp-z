@@ -81,6 +81,7 @@ static bool SDLCALL stdio_close(void *userdata)
 static SDL_IOStream *SDL_RWFromFP(FILE *fp, bool autoclose)
 {
     SDL_IOStreamInterface iface;
+    SDL_INIT_INTERFACE(&iface);
     IOStreamStdioFPData *rwopsdata;
     SDL_IOStream *rwops;
 
@@ -89,7 +90,6 @@ static SDL_IOStream *SDL_RWFromFP(FILE *fp, bool autoclose)
         return NULL;
     }
 
-    SDL_zero(iface);
     /* There's no stdio_size because SDL_GetIOSize emulates it the same way we'd do it for stdio anyhow. */
     iface.seek = stdio_seek;
     iface.read = stdio_read;
