@@ -107,6 +107,8 @@ if host_system != 'windows'
     import('gnome').post_install(glib_compile_schemas: true)
 endif
 
+global_include_dirs += include_directories('freetype-include')
+
 global_include_dirs += include_directories('src', 'binding')
 
 rpath = ''
