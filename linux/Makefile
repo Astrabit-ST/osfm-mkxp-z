@@ -194,13 +194,27 @@ $(LIBDIR)/libSDL3.a: $(DOWNLOADS)/sdl3/cmakebuild/Makefile
 	cd $(DOWNLOADS)/sdl3/cmakebuild; \
 	$(MAKE) -j$(NPROC); $(MAKE) install
 
-$(DOWNLOADS)/sdl3/cmakebuild/Makefile: $(DOWNLOADS)/sdl3/CMakeLists.txt
+$(DOWNLOADS)/sdl3/cmakebuild/Makefile: $(DOWNLOADS)/sdl3/CMakeLists.txt $(LIBDIR)/libdbus-1.so.3.38.3
 	cd $(DOWNLOADS)/sdl3; mkdir -p cmakebuild; cd cmakebuild; \
-	$(CMAKE) -DSDL_STATIC=1 -DSDL_SHARED=0
+	$(CMAKE) -DSDL_STATIC=1 -DSDL_SHARED=0 -DSDL_DBUS=yes
 
 $(DOWNLOADS)/sdl3/CMakeLists.txt:
 	$(CLONE) --no-checkout $(GITHUB)/libsdl-org/SDL $(DOWNLOADS)/sdl3
 	cd $(DOWNLOADS)/sdl3; git checkout release-3.2.0
+
+# dbus
+
+$(LIBDIR)/libdbus-1.so.3.38.3: $(DOWNLOADS)/dbus/cmakebuild/Makefile
+	cd $(DOWNLOADS)/dbus/cmakebuild; \
+	make -j$(NPROC); make install
+
+$(DOWNLOADS)/dbus/cmakebuild/Makefile: $(DOWNLOADS)/dbus/CMakeLists.txt
+	cd $(DOWNLOADS)/dbus; \
+	mkdir cmakebuild; cd cmakebuild; \
+	$(CMAKE) -DDBUS_WITH_GLIB=no -DDBUS_SESSION_SOCKET_DIR=/tmp
+
+$(DOWNLOADS)/dbus/CMakeLists.txt: init_dirs
+	$(CLONE) https://gitlab.freedesktop.org/dbus/dbus $(DOWNLOADS)/dbus -b dbus-1.16.2
 
 # SDL_image
 sdl3image: init_dirs sdl3 $(LIBDIR)/libSDL3_image.a
