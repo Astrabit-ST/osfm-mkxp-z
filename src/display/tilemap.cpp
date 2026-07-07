@@ -720,6 +720,10 @@ struct TilemapPrivate
 				atSelectSubPos(posRect, i, zoom.x, zoom.y);
 
 				FloatRect texRect = pieceRect[i];
+				texRect.x += 0.5f/(float)shState->config().framebufferScalingFactor;
+				texRect.y += 0.5f/(float)shState->config().framebufferScalingFactor;
+				texRect.w -= 1.0f/(float)shState->config().framebufferScalingFactor;
+				texRect.h -= 1.0f/(float)shState->config().framebufferScalingFactor;
 
 				/* Adjust to atlas coordinates */
 				texRect.y += atInd * autotileH;
@@ -735,7 +739,7 @@ struct TilemapPrivate
 		else
 		{
 			FloatRect posRect(x*TILE_SIZE*zoom.x, y*TILE_SIZE*zoom.y, TILE_SIZE*zoom.x, TILE_SIZE*zoom.y);
-			FloatRect texRect(0.5f, atInd * autotileH + 0.5f, 31, 31);
+			FloatRect texRect(0.5f/(float)shState->config().framebufferScalingFactor, atInd * autotileH + 0.5f/(float)shState->config().framebufferScalingFactor, 32 - 1.0f/(float)shState->config().framebufferScalingFactor, 32 - 1.0f/(float)shState->config().framebufferScalingFactor);
 			SVertex v[4];
 			Quad::setTexPosRect(v, texRect, posRect);
 
@@ -796,7 +800,7 @@ struct TilemapPrivate
 		int tileY = tsInd / 8;
 
 		Vec2i texPos = TileAtlas::tileToAtlasCoor(tileX, tileY, atlas.efTilesetH, atlas.size.y);
-		FloatRect texRect((float) texPos.x+0.5f, (float) texPos.y+0.5f, 31, 31);
+		FloatRect texRect((float) texPos.x + 0.5f/(float)shState->config().framebufferScalingFactor, (float) texPos.y + 0.5f/(float)shState->config().framebufferScalingFactor, 32 - 1.0f/(float)shState->config().framebufferScalingFactor, 32 - 1.0f/(float)shState->config().framebufferScalingFactor);
 		FloatRect posRect(x*TILE_SIZE*zoom.x, y*TILE_SIZE*zoom.y, TILE_SIZE*zoom.x, TILE_SIZE*zoom.y);
 
 		SVertex v[4];
