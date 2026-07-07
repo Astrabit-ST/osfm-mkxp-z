@@ -648,12 +648,17 @@ static const int deadDirFlags[] =
     dirFlags[1] | dirFlags[2]
 };
 
+/* This is a lookup table for handling directional input in `updateDir4()` and
+ * `updateDir8()`. For a direction `dir` which can be either `Input::Down`,
+ * `Input::Left`, `Input::Right` or `Input::Up`, the values of
+ * `otherDirs[dir/2-1][0]`, `otherDirs[dir/2-1][1]` and `otherDirs[dir/2-1][2]`
+ * are the three directions other than `dir`. */
 static const Input::ButtonCode otherDirs[4][3] =
 {
     { Input::Left, Input::Right, Input::Up    }, /* Down  */
     { Input::Down, Input::Up,    Input::Right }, /* Left  */
     { Input::Down, Input::Up,    Input::Left  }, /* Right */
-    { Input::Left, Input::Right, Input::Up    }  /* Up    */
+    { Input::Left, Input::Right, Input::Down  }, /* Up    */
 };
 
 struct InputPrivate
