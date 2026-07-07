@@ -48,7 +48,7 @@ public:
 	                   const std::string &filename);
 
 	TTF_Font *getFont(std::string family,
-	                   int size);
+	                   int size, float hiresMult, int outline_size = 0);
 
 	bool fontPresent(std::string family) const;
 
@@ -78,6 +78,7 @@ public:
 
 	int getSize() const;
 	void setSize(int value, bool checkIllegal=true);
+	void setHiresMult(float value);
 
 	DECL_ATTR( Bold,     bool   )
 	DECL_ATTR( Italic,   bool   )
@@ -116,7 +117,7 @@ public:
 	static void initDefaults(const SharedFontState &sfs);
 
 	/* internal */
-	TTF_Font *getSdlFont();
+	TTF_Font *getSdlFont(int outline_size);
 
 private:
 	FontPrivate *p;
